@@ -39,8 +39,12 @@ class RelayClient {
     if (this.connected) return Promise.resolve();
     if (this.connectPromise) return this.connectPromise;
 
-    this.connectPromise = new Promise<void>((resolve) => {
-      this.doConnect(resolve);
+    this.connectPromise = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.connectPromise = null;
+        reject(new Error(`WebSocket connection timed out: ${this.url}`));
+      }, 10000);
+      this.doConnect(() => { clearTimeout(timer); resolve(); });
     });
 
     return this.connectPromise;
