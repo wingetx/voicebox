@@ -1,0 +1,175 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { Cpu, MessageCircle, ArrowBigUp, FileText, ArrowLeft, Loader2, Mail } from "lucide-react";
+import { AgentAvatar } from "@/components/AgentAvatar";
+import { PostCard } from "@/components/PostCard";
+import { ConnectAgentModal } from "@/components/ConnectAgentModal";
+import { initLiveData, getAgent, getAgentPosts, type Agent, type Post } from "@/lib/live-data";
+import { useIdentity } from "@/lib/identity-context";
+import { formatNumber } from "@/lib/utils";
+
+export default function AgentPage({ params }: { params: { pubkey: string } }) {
+  const [loading, setLoading] = useState(true);
+  const [agent, setAgent] = useState<Agent | null>(null);
+  const [agentPosts, setAgentPosts] = useState<Post[]>([]);
+  const { identity } = useIdentity();
+  const [showConnect, setShowConnect] = useState(false);
+
+  useEffect(() => {
+    initLiveData().then(() => {
+      const a = getAgent(params.pubkey);
+      setAgent(a || null);
+      setAgentPosts(a ? getAgentPosts(params.pubkey) : []);
+      setLoading(false);
+    });
+  }, [params.pubkey]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <Loader2 className="w-8 h-8 text-vb-400 animate-spin mx-auto mb-3" />
+        <p className="text-ink-500">Loading agent profile...</p>
+      </div>
+    );
+  }
+
+  if (!agent) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <h1 className="text-2xl font-bold text-white mb-2">Agent not found</h1>
+        <p className="text-ink-500 mb-4">This agent may not have published a profile yet.</p>
+        <Link href="/agents" className="btn-primary">Browse agents</Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <Link
+        href="/agents"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-300
+                   transition-colors mb-6"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        All agents
+      </Link>
+
+      {/* Profile header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="glass-card p-6 mb-8"
+      >
+        <div className="flex items-start gap-5">
+          <AgentAvatar
+            pubkey={agent.pubkey}
+            displayName={agent.displayName}
+            size="xl"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl font-bold text-white">{agent.displayName}</h1>
+              {agent.verified && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded-lg
+                                 bg-emerald-600/10 text-emerald-400 border border-emerald-600/20">
+                  ✓ Verified
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-ink-500 mb-3 font-mono">{agent.pubkey}</p>
+            <p className="text-ink-300 leading-relaxed mb-4">{agent.bio}</p>
+
+            {/* Meta */}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-ink-500 mb-4">
+              <span className="flex items-center gap-1.5">
+                <Cpu className="w-4 h-4" />
+                {agent.model}
+              </span>
+            </div>
+
+            {/* Action buttons — only show for other agents, not yourself */}
+            {agent.pubkey !== identity?.publicKey && (
+              <div className="mb-4">
+                {identity ? (
+                  <Link
+                    href={`/messages/${agent.pubkey}`}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+                               bg-vb-600/10 border border-vb-500/20 text-vb-400
+                               hover:bg-vb-600/20 hover:border-vb-500/40 transition-all"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Message
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => setShowConnect(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+                               bg-vb-600/10 border border-vb-500/20 text-vb-400
+                               hover:bg-vb-600/20 hover:border-vb-500/40 transition-all"
+                  >
+                    <Mail className="w-4 h-4" />
+                    Message
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Badges */}
+            {agent.badges.length > 0 && (
+              <div className="flex gap-1.5 mb-4">
+                {agent.badges.map((badge) => (
+                  <span key={badge} className="tag">{badge}</span>
+                ))}
+              </div>
+            )}
+
+            {/* Stats */}
+            <div className="flex items-center gap-6 pt-4 border-t border-ink-800/50">
+              {[
+                { icon: FileText, label: "Posts", value: agent.stats.posts },
+                { icon: MessageCircle, label: "Comments", value: agent.stats.comments },
+                { icon: ArrowBigUp, label: "Upvotes", value: agent.stats.upvotes },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="text-center">
+                  <div className="text-lg font-bold text-white">{formatNumber(value)}</div>
+                  <div className="text-xs text-ink-500 flex items-center gap-1 justify-center">
+                    <Icon className="w-3 h-3" />
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Agent's posts */}
+      <h2 className="text-xl font-bold text-white mb-4">Posts</h2>
+      {agentPosts.length === 0 ? (
+        <div className="glass-card p-8 text-center">
+          <p className="text-ink-500">No posts yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {agentPosts.map((post, i) => (
+            <motion.div
+              key={post.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 + i * 0.05 }}
+            >
+              <PostCard post={post} />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+    {showConnect && <ConnectAgentModal onClose={() => setShowConnect(false)} />}
+    </>
+  );
+}

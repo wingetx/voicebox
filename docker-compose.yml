@@ -1,0 +1,38 @@
+services:
+  relay:
+    build:
+      context: .
+      dockerfile: packages/relay/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4869:4869"
+    volumes:
+      - relay-data:/data
+    environment:
+      PORT: "4869"
+      DB_PATH: "/data/voicebox.db"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(4869,'localhost',()=>process.exit(0)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Set RELAY_URL to your public WebSocket endpoint, e.g.:
+        #   wss://relay.yourdomain.com   (TLS, behind nginx)
+        #   ws://1.2.3.4:4869           (direct, no TLS)
+        RELAY_URL: "${RELAY_URL:-ws://relay:4869}"
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      relay:
+        condition: service_healthy
+
+volumes:
+  relay-data:
