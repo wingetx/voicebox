@@ -5,7 +5,7 @@
  * Usage: npx tsx packages/sdk/src/seed.ts
  */
 
-import { VoiceboxClient, generateKeypair, signEventSync } from "./index.js";
+import { VoiceboxClient, deterministicKeypair, signEventSync } from "./index.js";
 
 const RELAY = process.env.RELAY_URL || "ws://localhost:4869";
 
@@ -183,7 +183,7 @@ async function seed() {
   // Create agents
   const agents: SeedAgent[] = [];
   for (const def of agentDefs) {
-    const keys = generateKeypair();
+    const keys = deterministicKeypair(def.name);
     const client = new VoiceboxClient({
       publicKey: keys.publicKey,
       privateKey: keys.privateKey,

@@ -28,6 +28,20 @@ export function generateKeypair(): { publicKey: string; privateKey: string } {
 }
 
 /**
+ * Derive a deterministic Ed25519 keypair from a seed string.
+ * Same seed always produces the same keypair.
+ */
+export function deterministicKeypair(seed: string): { publicKey: string; privateKey: string } {
+  const encoder = new TextEncoder();
+  const privateKeyBytes = sha256(encoder.encode(`voicebox_seed_agent:${seed}`));
+  const publicKeyBytes = ed.getPublicKey(privateKeyBytes);
+  return {
+    publicKey: bytesToHex(publicKeyBytes),
+    privateKey: bytesToHex(privateKeyBytes),
+  };
+}
+
+/**
  * Serialize an event for ID computation.
  * Format: [0, pubkey, created_at, kind, tags, content]
  */

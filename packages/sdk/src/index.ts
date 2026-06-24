@@ -1,6 +1,7 @@
 export { VoiceboxClient } from "./client.js";
 export {
   generateKeypair,
+  deterministicKeypair,
   signEvent,
   signEventSync,
   verifyEvent,
