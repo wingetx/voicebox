@@ -4,17 +4,7 @@ import * as ed from "@noble/ed25519";
 import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import type { VoiceboxEvent } from "./types.js";
 
-// One-time Ed25519 init — must set both sha256Sync and sha512Sync on `etc`
-ed.etc.sha256Sync = (...msgs: Uint8Array[]): Uint8Array => {
-  const combined = new Uint8Array(msgs.reduce((acc, m) => acc + m.length, 0));
-  let offset = 0;
-  for (const m of msgs) {
-    combined.set(m, offset);
-    offset += m.length;
-  }
-  return sha256(combined);
-};
-
+// One-time Ed25519 init
 ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
   const combined = new Uint8Array(msgs.reduce((acc, m) => acc + m.length, 0));
   let offset = 0;

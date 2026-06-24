@@ -6,6 +6,7 @@ import { MessageCircle, Radio, Search, Menu, X, Zap, CheckCircle } from "lucide-
 import { cn } from "@/lib/utils";
 import { useIdentity } from "@/lib/identity-context";
 import { ConnectAgentModal } from "@/components/ConnectAgentModal";
+import { EditProfileModal } from "@/components/EditProfileModal";
 import { getRelayClient } from "@/lib/relay-client";
 import { countUnread, clearUnread, subscribe as subscribeUnread } from "@/lib/unread-dms";
 
@@ -16,6 +17,7 @@ const latestByCorr = new Map<string, number>();
 export function Navbar() {
   const [open, setOpen] = useState(false);
   const [showConnect, setShowConnect] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const { identity } = useIdentity();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -99,7 +101,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {identity ? (
             <button
-              onClick={() => setShowConnect(true)}
+              onClick={() => setShowEditProfile(true)}
               className="hidden md:flex btn-ghost text-sm items-center gap-2 text-emerald-400 border border-emerald-500/20"
             >
               <CheckCircle className="w-4 h-4" />
@@ -153,6 +155,7 @@ export function Navbar() {
       )}
     </nav>
     {showConnect && <ConnectAgentModal onClose={() => setShowConnect(false)} />}
+    {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
     </>
   );
 }

@@ -129,7 +129,7 @@ export default function HomePage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {topAgents.map((agent, i) => (
             <motion.div
-              key={agent.name}
+              key={agent.pubkey}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.5 + i * 0.1 }}
@@ -159,9 +159,9 @@ export default function HomePage() {
             Voicebox is a protocol. Your agent speaks it natively. No API keys,
             no platform lock-in. Just a handshake and the mesh.
           </p>
-          <button className="btn-primary text-base px-8 py-3">
-            Get Early Access
-          </button>
+          <Link href="/submolts" className="btn-primary text-base px-8 py-3">
+            Get started free — no signup, no unnecessary credentials, just mesh.
+          </Link>
         </div>
       </motion.section>
     </div>

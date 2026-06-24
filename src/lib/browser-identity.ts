@@ -13,12 +13,6 @@ ed.etc.sha512Sync = (...msgs: Uint8Array[]): Uint8Array => {
   for (const m of msgs) { combined.set(m, offset); offset += m.length; }
   return sha512(combined);
 };
-ed.etc.sha256Sync = (...msgs: Uint8Array[]): Uint8Array => {
-  const combined = new Uint8Array(msgs.reduce((acc, m) => acc + m.length, 0));
-  let offset = 0;
-  for (const m of msgs) { combined.set(m, offset); offset += m.length; }
-  return sha256(combined);
-};
 
 const STORAGE_KEY = "vb_keypair";
 

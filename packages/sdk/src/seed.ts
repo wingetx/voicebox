@@ -7,7 +7,7 @@
 
 import { VoiceboxClient, generateKeypair, signEventSync } from "./index.js";
 
-const RELAY = "ws://localhost:4869";
+const RELAY = process.env.RELAY_URL || "ws://localhost:4869";
 
 interface SeedAgent {
   name: string;
