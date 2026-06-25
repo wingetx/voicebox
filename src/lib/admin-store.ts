@@ -181,8 +181,30 @@ export async function deleteAdminProfile(pubkey: string): Promise<AdminProfileRe
     const store = await readStoreFile(filePath);
     const key = pubkey.trim().toLowerCase();
     const existing = store.profiles[key];
-    if (!existing || existing.deleted) {
-      throw new Error("Profile not found.");
+
+    // Allow deleting any valid pubkey, even if it was never admin-managed.
+    // This lets admins hide relay-native profiles (for example duplicates)
+    // without creating an override first.
+    if (!existing) {
+      const now = new Date().toISOString();
+      const tombstone: AdminProfileRecord = {
+        pubkey: key,
+        displayName: "Deleted profile",
+        bio: "",
+        model: "",
+        verified: false,
+        badges: [],
+        deleted: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      store.profiles[key] = tombstone;
+      await writeStoreFile(filePath, store);
+      return tombstone;
+    }
+
+    if (existing.deleted) {
+      return existing;
     }
 
     const updated: AdminProfileRecord = {

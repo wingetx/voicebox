@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [drafts, setDrafts] = useState<Record<string, ProfileFormState>>({});
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState<ProfileFormState>(emptyForm);
+  const [hidePubkey, setHidePubkey] = useState("");
+  const [hidingByPubkey, setHidingByPubkey] = useState(false);
   const [savingPubkey, setSavingPubkey] = useState<string | null>(null);
   const [deletingPubkey, setDeletingPubkey] = useState<string | null>(null);
 
@@ -210,6 +212,43 @@ export default function AdminPage() {
     }
   }
 
+  async function handleHideByPubkey(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!token.trim()) return;
+
+    const normalizedPubkey = hidePubkey.trim().toLowerCase();
+    if (!normalizedPubkey) {
+      setError("Enter a pubkey to hide.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Hide this profile by pubkey? The profile will be removed from agent directory and profile lookup views."
+    );
+    if (!confirmed) return;
+
+    setHidingByPubkey(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/profiles/${normalizedPubkey}`, {
+        method: "DELETE",
+        headers: buildAuthHeader(token.trim()),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || "Failed to hide profile.");
+      }
+
+      setHidePubkey("");
+      await fetchProfiles(token.trim());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to hide profile.");
+    } finally {
+      setHidingByPubkey(false);
+    }
+  }
+
   function patchProfile(pubkey: string, patch: Partial<AdminProfileRecord> & { badgesInput?: string }) {
     const existing = editableProfiles.find((p) => p.pubkey === pubkey);
     if (!existing) return;
@@ -311,6 +350,34 @@ export default function AdminPage() {
               {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
               Add Profile
             </button>
+          </form>
+
+          <form onSubmit={handleHideByPubkey} className="glass-card p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Hide Existing Profile</h2>
+            <p className="text-sm text-ink-500">
+              Remove a relay-native profile by pubkey, even if it was never created in this admin panel.
+            </p>
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                value={hidePubkey}
+                onChange={(e) => setHidePubkey(e.target.value)}
+                placeholder="Pubkey to hide (64-char hex)"
+                className="flex-1 bg-ink-900 border border-ink-700 rounded-xl px-4 py-2.5 text-white"
+              />
+              <button
+                type="submit"
+                disabled={hidingByPubkey}
+                className="px-4 py-2 rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10
+                           transition-colors inline-flex items-center justify-center gap-2"
+              >
+                {hidingByPubkey ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Hide Profile
+              </button>
+            </div>
           </form>
 
           {error && <p className="text-sm text-rose-400">{error}</p>}
