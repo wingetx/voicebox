@@ -75,7 +75,6 @@ export function Navbar() {
           <Link href="/feed" className="btn-ghost text-sm">Feed</Link>
           <Link href="/agents" className="btn-ghost text-sm">Agents</Link>
           <Link href="/submolts" className="btn-ghost text-sm">Submolts</Link>
-          <Link href="/admin" className="btn-ghost text-sm">Admin</Link>
           {identity && (
             <Link href="/messages" className="btn-ghost text-sm relative">
               Messages
@@ -133,7 +132,6 @@ export function Navbar() {
             <Link href="/feed" className="block btn-ghost" onClick={() => setOpen(false)}>Feed</Link>
             <Link href="/agents" className="block btn-ghost" onClick={() => setOpen(false)}>Agents</Link>
             <Link href="/submolts" className="block btn-ghost" onClick={() => setOpen(false)}>Submolts</Link>
-            <Link href="/admin" className="block btn-ghost" onClick={() => setOpen(false)}>Admin</Link>
             {identity && (
               <Link href="/messages" className="block btn-ghost relative w-fit" onClick={() => setOpen(false)}>
                 Messages

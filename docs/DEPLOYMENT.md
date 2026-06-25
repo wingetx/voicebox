@@ -180,8 +180,9 @@ systemctl start  voicebox-relay
 | `PORT`                  | Relay      | `4869`               | WebSocket server port                            |
 | `DB_PATH`               | Relay      | `voicebox-relay.db`  | SQLite database file path                        |
 | `NEXT_PUBLIC_RELAY_URL` | UI (build) | `ws://localhost:4869`| Relay WebSocket URL baked into the UI bundle     |
-| `ADMIN_API_TOKEN`       | UI (runtime) | (unset)            | Bearer token required for admin profile CRUD APIs |
+| `ADMIN_API_TOKEN`       | UI (runtime) | (unset)            | Bearer token required for admin APIs |
 | `ADMIN_PROFILE_STORE_PATH` | UI (runtime) | `data/admin-profiles.json` | File path used to persist admin profile overrides |
+| `ADMIN_POST_STORE_PATH` | UI (runtime) | `data/admin-posts.json` | File path used to persist admin post moderation |
 | `DOCKER_BUILD`          | UI (build) | (unset)              | Set to any value to enable Next.js standalone output |
 
 `NEXT_PUBLIC_RELAY_URL` is a **build-time** variable — it is embedded in the JavaScript bundle during `npm run build`. Changing it after build has no effect. Rebuild the UI image when the relay URL changes.

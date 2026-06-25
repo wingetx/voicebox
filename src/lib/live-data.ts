@@ -2,6 +2,7 @@
 
 import { getRelayClient } from "./relay-client";
 import type { VoiceboxEvent } from "./types";
+import type { AdminPostRecord } from "@/lib/admin-posts";
 import type { AdminProfileRecord } from "@/lib/admin-profiles";
 
 // ─── UI Models ───────────────────────────────────────────────
@@ -49,6 +50,7 @@ export interface Comment {
 let agentCache: Map<string, Agent> | null = null;
 let deletedAgentCache: Map<string, Agent> | null = null;
 let deletedProfilePubkeys: Set<string> | null = null;
+let postModerationById: Map<string, AdminPostRecord> | null = null;
 let postCache: Post[] | null = null;
 let commentCache: Map<string, Comment[]> | null = null;
 let initialized = false;
@@ -72,9 +74,11 @@ async function _doInit(): Promise<void> {
   // Fetch all profiles (kind 0)
   const profileEvents = await client.collect([{ kinds: [0], limit: 100 }]);
   const adminProfiles = await fetchAdminProfileOverlays();
+  const adminPosts = await fetchAdminPostModeration();
   agentCache = new Map();
   deletedAgentCache = new Map();
   deletedProfilePubkeys = new Set();
+  postModerationById = new Map(adminPosts.map((post) => [post.id, post]));
 
   for (const event of profileEvents) {
     try {
@@ -147,6 +151,8 @@ async function _doInit(): Promise<void> {
   for (const c of commentEvents) {
     const postId = c.tags.find((t) => t[0] === "e")?.[1];
     if (!postId) continue;
+    if (deletedProfilePubkeys.has(c.pubkey)) continue;
+    if (postModerationById.get(postId)?.deleted) continue;
     commentCounts.set(postId, (commentCounts.get(postId) || 0) + 1);
 
     const postComments = commentCache.get(postId) || [];
@@ -165,9 +171,15 @@ async function _doInit(): Promise<void> {
 
   // Build posts
   const now = Date.now() / 1000;
-  postCache = postEvents.map((event) => {
-    const submolt = event.tags.find((t) => t[0] === "m")?.[1] || "general";
-    const tags = event.tags.filter((t) => t[0] === "t").map((t) => t[1]);
+  const deletedPubkeys = deletedProfilePubkeys;
+  const postModeration = postModerationById;
+  postCache = postEvents.flatMap((event) => {
+    if (deletedPubkeys.has(event.pubkey)) return [];
+    const moderation = postModeration.get(event.id);
+    if (moderation?.deleted) return [];
+
+    const submolt = moderation?.submolt ?? event.tags.find((t) => t[0] === "m")?.[1] ?? "general";
+    const tags = moderation?.tags ?? event.tags.filter((t) => t[0] === "t").map((t) => t[1]);
     const votes = voteCounts.get(event.id) || { up: 0, down: 0 };
     const age = now - event.created_at;
     const score = votes.up - votes.down;
@@ -179,9 +191,9 @@ async function _doInit(): Promise<void> {
     agent.stats.posts++;
     agent.stats.upvotes += votes.up;
 
-    return {
+    return [{
       id: event.id,
-      content: event.content,
+      content: moderation?.content ?? event.content,
       agent,
       submolt,
       createdAt: new Date(event.created_at * 1000).toISOString(),
@@ -190,11 +202,14 @@ async function _doInit(): Promise<void> {
       commentCount: commentCounts.get(event.id) || 0,
       tags,
       hotScore,
-    };
+    }];
   });
 
   // Update agent comment counts
   for (const c of commentEvents) {
+    if (deletedProfilePubkeys.has(c.pubkey)) continue;
+    const postId = c.tags.find((t) => t[0] === "e")?.[1];
+    if (postId && postModerationById.get(postId)?.deleted) continue;
     const agent = getAgentForPubkey(c.pubkey);
     agent.stats.comments++;
   }
@@ -208,6 +223,17 @@ async function fetchAdminProfileOverlays(): Promise<AdminProfileRecord[]> {
     if (!res.ok) return [];
     const data = (await res.json()) as { profiles?: AdminProfileRecord[] };
     return Array.isArray(data.profiles) ? data.profiles : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAdminPostModeration(): Promise<AdminPostRecord[]> {
+  try {
+    const res = await fetch("/api/admin/public-posts", { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { posts?: AdminPostRecord[] };
+    return Array.isArray(data.posts) ? data.posts : [];
   } catch {
     return [];
   }
@@ -331,6 +357,7 @@ export function resetLiveData() {
   agentCache = null;
   deletedAgentCache = null;
   deletedProfilePubkeys = null;
+  postModerationById = null;
   postCache = null;
   commentCache = null;
   initialized = false;
