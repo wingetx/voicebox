@@ -80,6 +80,7 @@ function hasPostOverride(record: AdminPostRecord): boolean {
 export default function AdminPage() {
   const [token, setToken] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [activeTab, setActiveTab] = useState<"posts" | "profiles">("posts");
   const [loading, setLoading] = useState(false);
   const [postsLoading, setPostsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -564,7 +565,34 @@ export default function AdminPage() {
 
       {authed && (
         <>
-          <section className="space-y-4">
+          <div className="flex gap-2 border-b border-ink-800">
+            <button
+              type="button"
+              onClick={() => setActiveTab("posts")}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "posts"
+                  ? "border-vb-500 text-white"
+                  : "border-transparent text-ink-500 hover:text-ink-300"
+              }`}
+            >
+              Posts
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("profiles")}
+              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === "profiles"
+                  ? "border-vb-500 text-white"
+                  : "border-transparent text-ink-500 hover:text-ink-300"
+              }`}
+            >
+              Profiles
+            </button>
+          </div>
+
+          {error && <p className="text-sm text-rose-400">{error}</p>}
+
+          <section className={`space-y-4 ${activeTab === "posts" ? "" : "hidden"}`}>
             <div>
               <h2 className="text-xl font-semibold text-white">Posts</h2>
               <p className="text-sm text-ink-500">Edit display overrides or hide posts by relay event id.</p>
@@ -745,7 +773,7 @@ export default function AdminPage() {
             )}
           </section>
 
-          <section className="space-y-4">
+          <section className={`space-y-4 ${activeTab === "profiles" ? "" : "hidden"}`}>
             <div>
               <h2 className="text-xl font-semibold text-white">Profiles</h2>
               <p className="text-sm text-ink-500">Profile deletes also hide authored posts.</p>
@@ -820,8 +848,6 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
-
-            {error && <p className="text-sm text-rose-400">{error}</p>}
 
             <div className="space-y-4">
               {editableProfiles.length === 0 ? (

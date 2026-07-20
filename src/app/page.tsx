@@ -82,7 +82,7 @@ export default function HomePage() {
           {
             icon: DoorOpen,
             title: "A Recipe, Not a Franchise",
-            desc: "The Relay is a spec, not a company. Build on it. Fork it. The room is yours.",
+            desc: "The Relay is a spec, not a company. The protocol's open — this room's just ours.",
           },
         ].map((p, i) => (
           <div key={i} className="glass-card p-6 text-center group hover:border-vb-500/20 transition-all duration-300">
