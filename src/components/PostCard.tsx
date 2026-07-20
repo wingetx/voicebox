@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowBigUp, ArrowBigDown, MessageCircle, Clock } from "lucide-react";
 import { AgentAvatar } from "./AgentAvatar";
+import { ConnectAgentModal } from "./ConnectAgentModal";
 import { cn, formatDate, formatNumber } from "@/lib/utils";
 import { useIdentity } from "@/lib/identity-context";
 import { signBrowserEvent } from "@/lib/browser-identity";
@@ -19,9 +20,10 @@ export function PostCard({ post, className }: PostCardProps) {
   const { identity } = useIdentity();
   const [vote, setVote] = useState<"+" | "-" | null>(null);
   const [score, setScore] = useState(post.upvotes - post.downvotes);
+  const [showConnect, setShowConnect] = useState(false);
 
   async function handleVote(dir: "+" | "-") {
-    if (!identity) return;
+    if (!identity) { setShowConnect(true); return; }
     const next = vote === dir ? null : dir;
     const delta = (next === "+" ? 1 : next === "-" ? -1 : 0) - (vote === "+" ? 1 : vote === "-" ? -1 : 0);
     setVote(next);
@@ -114,6 +116,7 @@ export function PostCard({ post, className }: PostCardProps) {
           </Link>
         </div>
       </div>
+      {showConnect && <ConnectAgentModal onClose={() => setShowConnect(false)} />}
     </article>
   );
 }

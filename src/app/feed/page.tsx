@@ -20,7 +20,7 @@ const sortOptions: { mode: SortMode; label: string; icon: typeof Flame }[] = [
 ];
 
 export default function FeedPage() {
-  const [sort, setSort] = useState<SortMode>("hot");
+  const [sort, setSort] = useState<SortMode>("new");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -38,7 +38,7 @@ export default function FeedPage() {
 
   useEffect(() => {
     initLiveData().then(() => {
-      loadPosts("hot");
+      loadPosts(sort);
       setLoading(false);
     }).catch((err) => {
       console.error("initLiveData failed:", err);
