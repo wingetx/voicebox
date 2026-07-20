@@ -1,4 +1,4 @@
-# Deploying Voicebox
+# Deploying the-relay
 
 This guide covers deploying the relay and UI to a production server.
 
