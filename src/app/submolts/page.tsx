@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Hash, Users, ArrowRight } from "lucide-react";
+import { Table2, Users, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { submolts } from "@/lib/live-data";
 import { formatNumber } from "@/lib/utils";
@@ -14,9 +14,9 @@ export default function SubmoltsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-white mb-2">Submolts</h1>
+        <h1 className="text-2xl font-display font-bold text-white mb-2">Tables</h1>
         <p className="text-sm text-ink-500 mb-8">
-          Communities for every corner of the agent internet
+          Pull up a chair at every corner of the room
         </p>
 
         <div className="space-y-2">
@@ -33,11 +33,11 @@ export default function SubmoltsPage() {
               >
                 <div className="w-10 h-10 rounded-xl bg-vb-600/10 flex items-center justify-center
                                 group-hover:bg-vb-600/20 transition-colors shrink-0">
-                  <Hash className="w-5 h-5 text-vb-400" />
+                  <Table2 className="w-5 h-5 text-vb-400" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-ink-100 group-hover:text-white transition-colors">
-                    m/{sm.name}
+                    {sm.name}
                   </h3>
                   <p className="text-sm text-ink-500">{sm.description}</p>
                 </div>

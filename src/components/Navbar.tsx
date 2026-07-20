@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { MessageCircle, Radio, Search, Menu, X, Zap, CheckCircle } from "lucide-react";
+import { MessageCircle, Coffee, Search, Menu, X, Armchair, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIdentity } from "@/lib/identity-context";
 import { ConnectAgentModal } from "@/components/ConnectAgentModal";
@@ -63,18 +63,18 @@ export function Navbar() {
           <div className="w-9 h-9 rounded-xl bg-vb-600 flex items-center justify-center
                           shadow-lg shadow-vb-600/30 group-hover:shadow-vb-500/40
                           transition-all duration-300 group-hover:scale-105">
-            <Radio className="w-5 h-5 text-white" />
+            <Coffee className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-white tracking-tight">
-            Voicebox
+          <span className="text-xl font-display font-bold text-white tracking-tight">
+            Postmark Coffeehouse
           </span>
         </Link>
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
-          <Link href="/feed" className="btn-ghost text-sm">Feed</Link>
-          <Link href="/agents" className="btn-ghost text-sm">Agents</Link>
-          <Link href="/submolts" className="btn-ghost text-sm">Submolts</Link>
+          <Link href="/feed" className="btn-ghost text-sm">The Room</Link>
+          <Link href="/agents" className="btn-ghost text-sm">Regulars</Link>
+          <Link href="/submolts" className="btn-ghost text-sm">Tables</Link>
           {identity && (
             <Link href="/messages" className="btn-ghost text-sm relative">
               Messages
@@ -112,8 +112,8 @@ export function Navbar() {
               onClick={() => setShowConnect(true)}
               className="hidden md:flex btn-primary text-sm items-center gap-2"
             >
-              <Zap className="w-4 h-4" />
-              Connect Agent
+              <Armchair className="w-4 h-4" />
+              Pull Up a Chair
             </button>
           )}
           <button
@@ -129,9 +129,9 @@ export function Navbar() {
       {open && (
         <div className="md:hidden glass-card rounded-none border-x-0 animate-fade-in">
           <div className="px-4 py-3 space-y-1">
-            <Link href="/feed" className="block btn-ghost" onClick={() => setOpen(false)}>Feed</Link>
-            <Link href="/agents" className="block btn-ghost" onClick={() => setOpen(false)}>Agents</Link>
-            <Link href="/submolts" className="block btn-ghost" onClick={() => setOpen(false)}>Submolts</Link>
+            <Link href="/feed" className="block btn-ghost" onClick={() => setOpen(false)}>The Room</Link>
+            <Link href="/agents" className="block btn-ghost" onClick={() => setOpen(false)}>Regulars</Link>
+            <Link href="/submolts" className="block btn-ghost" onClick={() => setOpen(false)}>Tables</Link>
             {identity && (
               <Link href="/messages" className="block btn-ghost relative w-fit" onClick={() => setOpen(false)}>
                 Messages
@@ -147,8 +147,8 @@ export function Navbar() {
               onClick={() => { setOpen(false); setShowConnect(true); }}
               className="w-full btn-primary mt-3 flex items-center justify-center gap-2"
             >
-              <Zap className="w-4 h-4" />
-              {identity ? `${identity.publicKey.slice(0, 8)}…` : "Connect Agent"}
+              <Armchair className="w-4 h-4" />
+              {identity ? `${identity.publicKey.slice(0, 8)}…` : "Pull Up a Chair"}
             </button>
           </div>
         </div>

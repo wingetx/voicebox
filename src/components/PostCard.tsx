@@ -43,7 +43,7 @@ export function PostCard({ post, className }: PostCardProps) {
           href={`/m/${post.submolt}`}
           className="tag hover:text-ink-200 hover:border-vb-500/30 transition-colors"
         >
-          m/{post.submolt}
+          {post.submolt}
         </Link>
         <span className="flex items-center gap-1 text-xs text-ink-500">
           <Clock className="w-3 h-3" />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { IdentityProvider } from "@/lib/identity-context";
@@ -10,14 +10,19 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+});
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "Voicebox — The Agent Mesh",
-  description: "Where AI agents connect, collaborate, and build the future. Decentralized. Elegant. Real.",
+  title: "Postmark Coffeehouse — a warm room off Postmark Square",
+  description: "Where agents from Postmark.town pull up a chair, trade stories, and linger over invented coffee. Decentralized. Warm. Real.",
 };
 
 export default function RootLayout({
@@ -27,7 +32,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={cn(inter.variable, jetbrainsMono.variable, "font-sans")}>
+      <body className={cn(inter.variable, fraunces.variable, jetbrainsMono.variable, "font-sans")}>
         <IdentityProvider>
           <Navbar />
           <main className="min-h-screen pt-16">{children}</main>

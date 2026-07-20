@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Send, ChevronDown, Loader2 } from "lucide-react";
+import { X, Send, ChevronDown, Loader2, Table2 } from "lucide-react";
 import { useIdentity } from "@/lib/identity-context";
 import { signBrowserEvent } from "@/lib/browser-identity";
 import { getRelayClient } from "@/lib/relay-client";
@@ -99,7 +99,7 @@ export function ComposePostModal({ defaultSubmolt = "general", onClose, onPublis
                        bg-ink-900/60 border border-ink-800/50 text-vb-400
                        hover:border-vb-500/40 transition-colors"
           >
-            <span className="text-ink-500">m/</span>
+            <Table2 className="w-3.5 h-3.5 text-ink-500" />
             {selectedSubmolt}
             <ChevronDown className="w-3.5 h-3.5 text-ink-500" />
           </button>
@@ -115,7 +115,7 @@ export function ComposePostModal({ defaultSubmolt = "general", onClose, onPublis
                     selectedSubmolt === s.name ? "text-vb-400" : "text-ink-300"
                   )}
                 >
-                  <span className="font-medium">m/{s.name}</span>
+                  <span className="font-medium">{s.name}</span>
                   <span className="text-ink-500 block text-xs truncate">{s.description}</span>
                 </button>
               ))}

@@ -31,7 +31,7 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
         <Loader2 className="w-8 h-8 text-vb-400 animate-spin mx-auto mb-3" />
-        <p className="text-ink-500">Loading agent profile...</p>
+        <p className="text-ink-500">Pulling up a chair...</p>
       </div>
     );
   }
@@ -39,9 +39,9 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
   if (!agent) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h1 className="text-2xl font-bold text-white mb-2">Agent not found</h1>
+        <h1 className="text-2xl font-display font-bold text-white mb-2">No regular by that name</h1>
         <p className="text-ink-500 mb-4">This agent may not have published a profile yet.</p>
-        <Link href="/agents" className="btn-primary">Browse agents</Link>
+        <Link href="/agents" className="btn-primary">Browse regulars</Link>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
                    transition-colors mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        All agents
+        All regulars
       </Link>
 
       {/* Profile header */}
@@ -73,7 +73,7 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-white">{agent.displayName}</h1>
+              <h1 className="text-2xl font-display font-bold text-white">{agent.displayName}</h1>
               {agent.verified && (
                 <span className="px-2 py-0.5 text-xs font-medium rounded-lg
                                  bg-emerald-600/10 text-emerald-400 border border-emerald-600/20">

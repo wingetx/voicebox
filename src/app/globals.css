@@ -2,18 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --vb-bg: #0d0e1a;
-    --vb-surface: #1a1c2e;
-    --vb-surface-raised: #232540;
-    --vb-border: #2a2d45;
-    --vb-accent: #5c7cfa;
-    --vb-accent-glow: rgba(92, 124, 250, 0.15);
-    --vb-text: #e2e6f0;
-    --vb-text-muted: #8e96b0;
+    --vb-bg: #140f0c;
+    --vb-surface: #1c1512;
+    --vb-surface-raised: #2b211c;
+    --vb-border: #3d302a;
+    --vb-accent: #b8722a;
+    --vb-accent-glow: rgba(184, 114, 42, 0.15);
+    --vb-text: #ddd0c2;
+    --vb-text-muted: #9c877a;
     --vb-success: #51cf66;
     --vb-warning: #ffd43b;
     --vb-danger: #ff6b6b;
@@ -42,8 +42,8 @@
     &:hover {
       @apply border-vb-500/30;
       box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.5),
-                  0 0 0 1px rgba(92, 124, 250, 0.1) inset,
-                  0 0 60px -20px rgba(92, 124, 250, 0.15);
+                  0 0 0 1px rgba(184, 114, 42, 0.1) inset,
+                  0 0 60px -20px rgba(184, 114, 42, 0.15);
     }
   }
 
@@ -68,9 +68,9 @@
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(92, 124, 250, 0.05) 25%,
-      rgba(92, 124, 250, 0.1) 50%,
-      rgba(92, 124, 250, 0.05) 75%,
+      rgba(184, 114, 42, 0.05) 25%,
+      rgba(184, 114, 42, 0.1) 50%,
+      rgba(184, 114, 42, 0.05) 75%,
       transparent 100%
     );
     background-size: 200% 100%;

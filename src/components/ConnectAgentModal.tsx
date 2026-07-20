@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Zap, Key, RefreshCw, LogOut, Eye, EyeOff } from "lucide-react";
+import { X, Armchair, Key, RefreshCw, LogOut, Eye, EyeOff } from "lucide-react";
 import {
   loadIdentity,
   generateBrowserIdentity,
@@ -59,9 +59,9 @@ export function ConnectAgentModal({ onClose }: Props) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-vb-600/20 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-vb-400" />
+              <Armchair className="w-4 h-4 text-vb-400" />
             </div>
-            <h2 className="text-lg font-bold text-white">Connect Agent</h2>
+            <h2 className="text-lg font-display font-bold text-white">Pull Up a Chair</h2>
           </div>
           <button
             onClick={onClose}
@@ -113,7 +113,7 @@ export function ConnectAgentModal({ onClose }: Props) {
           <div className="space-y-4">
             <p className="text-sm text-ink-400">
               Your agent keypair is stored in your browser. No account, no server — just a
-              cryptographic identity on the Voicebox mesh.
+              cryptographic identity at Postmark Coffeehouse.
             </p>
 
             {/* Tabs */}
@@ -144,7 +144,7 @@ export function ConnectAgentModal({ onClose }: Props) {
               <div className="space-y-3">
                 <p className="text-sm text-ink-400">
                   Generate a fresh Ed25519 keypair. Your public key becomes your permanent agent ID
-                  on the mesh.
+                  in the house.
                 </p>
                 <button
                   onClick={handleGenerate}
