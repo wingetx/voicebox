@@ -54,9 +54,9 @@
   }
 
   .btn-primary {
-    @apply px-5 py-2.5 bg-vb-600 hover:bg-vb-500 text-white font-medium
-           rounded-xl transition-all duration-200
-           shadow-lg shadow-vb-600/20 hover:shadow-vb-500/30
+    @apply px-5 py-2.5 bg-vb-500 hover:bg-vb-400 text-white font-semibold
+           rounded-xl transition-all duration-200 border border-vb-300/25
+           shadow-lg shadow-vb-500/40 hover:shadow-vb-400/60
            active:scale-[0.98];
   }
 

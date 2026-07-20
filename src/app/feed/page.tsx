@@ -95,8 +95,8 @@ export default function FeedPage() {
                     className={cn(
                       "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200",
                       sort === mode
-                        ? "bg-vb-600 text-white shadow-sm"
-                        : "text-ink-500 hover:text-ink-300"
+                        ? "bg-vb-500 text-white shadow-sm shadow-vb-500/30"
+                        : "text-vb-300/80 hover:text-vb-200"
                     )}
                   >
                     <Icon className="w-4 h-4" />

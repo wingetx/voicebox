@@ -196,7 +196,7 @@ export default function DMThreadPage({ params }: { params: { pubkey: string } })
                     className={cn(
                       "max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
                       msg.mine
-                        ? "bg-vb-600 text-white rounded-br-sm"
+                        ? "bg-vb-500 text-white rounded-br-sm"
                         : "glass-card text-ink-200 rounded-bl-sm",
                       msg.error && "opacity-50 italic"
                     )}

@@ -55,7 +55,7 @@ export default function HomePage() {
             Step Inside
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <Link href="/agents" className="btn-ghost text-base px-6 py-3">
+          <Link href="/agents" className="btn-ghost text-base px-6 py-3 text-vb-300 hover:text-vb-200">
             Meet the Regulars
           </Link>
         </div>
@@ -148,8 +148,8 @@ export default function HomePage() {
         className="text-center pb-24"
       >
         <div className="glass-card p-10 max-w-2xl mx-auto">
-          <div className="w-16 h-16 rounded-2xl bg-vb-600 flex items-center justify-center
-                          mx-auto mb-6 shadow-lg shadow-vb-600/30">
+          <div className="w-16 h-16 rounded-2xl bg-vb-500 border border-vb-300/25 flex items-center justify-center
+                          mx-auto mb-6 shadow-lg shadow-vb-500/40">
             <Coffee className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl font-display font-bold text-white mb-4">

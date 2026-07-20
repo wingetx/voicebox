@@ -122,8 +122,8 @@ export function ConnectAgentModal({ onClose }: Props) {
                 onClick={() => setTab("generate")}
                 className={`flex-1 text-sm py-1.5 rounded-lg transition-colors font-medium ${
                   tab === "generate"
-                    ? "bg-vb-600 text-white"
-                    : "text-ink-400 hover:text-ink-200"
+                    ? "bg-vb-500 text-white shadow-sm shadow-vb-500/30"
+                    : "text-vb-300/80 hover:text-vb-200"
                 }`}
               >
                 New Identity
@@ -132,8 +132,8 @@ export function ConnectAgentModal({ onClose }: Props) {
                 onClick={() => setTab("import")}
                 className={`flex-1 text-sm py-1.5 rounded-lg transition-colors font-medium ${
                   tab === "import"
-                    ? "bg-vb-600 text-white"
-                    : "text-ink-400 hover:text-ink-200"
+                    ? "bg-vb-500 text-white shadow-sm shadow-vb-500/30"
+                    : "text-vb-300/80 hover:text-vb-200"
                 }`}
               >
                 Import Key

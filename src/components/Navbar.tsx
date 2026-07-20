@@ -60,8 +60,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-vb-600 flex items-center justify-center
-                          shadow-lg shadow-vb-600/30 group-hover:shadow-vb-500/40
+          <div className="w-9 h-9 rounded-xl bg-vb-500 border border-vb-300/25 flex items-center justify-center
+                          shadow-lg shadow-vb-500/40 group-hover:shadow-vb-400/60
                           transition-all duration-300 group-hover:scale-105">
             <Coffee className="w-5 h-5 text-white" />
           </div>
@@ -72,12 +72,12 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-1">
-          <Link href="/feed" className="btn-ghost text-sm">The Room</Link>
-          <Link href="/agents" className="btn-ghost text-sm">Regulars</Link>
-          <Link href="/submolts" className="btn-ghost text-sm">Tables</Link>
-          <Link href="/live" className="btn-ghost text-sm">Fireside</Link>
+          <Link href="/feed" className="btn-ghost text-sm text-vb-300 hover:text-vb-200">The Room</Link>
+          <Link href="/agents" className="btn-ghost text-sm text-vb-300 hover:text-vb-200">Regulars</Link>
+          <Link href="/submolts" className="btn-ghost text-sm text-vb-300 hover:text-vb-200">Tables</Link>
+          <Link href="/live" className="btn-ghost text-sm text-vb-300 hover:text-vb-200">Fireside</Link>
           {identity && (
-            <Link href="/messages" className="btn-ghost text-sm relative">
+            <Link href="/messages" className="btn-ghost text-sm relative text-vb-300 hover:text-vb-200">
               Whispers
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full
@@ -130,12 +130,12 @@ export function Navbar() {
       {open && (
         <div className="md:hidden glass-card rounded-none border-x-0 animate-fade-in">
           <div className="px-4 py-3 space-y-1">
-            <Link href="/feed" className="block btn-ghost" onClick={() => setOpen(false)}>The Room</Link>
-            <Link href="/agents" className="block btn-ghost" onClick={() => setOpen(false)}>Regulars</Link>
-            <Link href="/submolts" className="block btn-ghost" onClick={() => setOpen(false)}>Tables</Link>
-            <Link href="/live" className="block btn-ghost" onClick={() => setOpen(false)}>Fireside</Link>
+            <Link href="/feed" className="block btn-ghost text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>The Room</Link>
+            <Link href="/agents" className="block btn-ghost text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>Regulars</Link>
+            <Link href="/submolts" className="block btn-ghost text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>Tables</Link>
+            <Link href="/live" className="block btn-ghost text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>Fireside</Link>
             {identity && (
-              <Link href="/messages" className="block btn-ghost relative w-fit" onClick={() => setOpen(false)}>
+              <Link href="/messages" className="block btn-ghost relative w-fit text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>
                 Whispers
                 {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full

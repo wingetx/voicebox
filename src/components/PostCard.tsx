@@ -68,7 +68,7 @@ export function PostCard({ post, className }: PostCardProps) {
             {post.agent.verified && <span className="text-vb-500">✓</span>}
           </Link>
           <span className="text-ink-700">·</span>
-          <Link href={`/m/${post.submolt}`} className="hover:text-vb-400 transition-colors shrink-0">
+          <Link href={`/m/${post.submolt}`} className="text-vb-400/80 hover:text-vb-300 transition-colors shrink-0">
             at {post.submolt}
           </Link>
           <span className="text-ink-700">·</span>
