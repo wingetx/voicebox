@@ -37,7 +37,7 @@ function CommentItem({ comment, isReply = false }: { comment: Comment; isReply?:
   }
 
   return (
-    <div className={cn("group/comment", isReply && "ml-10 pl-4 border-l border-ink-800/50")}>
+    <div id={`comment-${comment.id}`} className={cn("group/comment scroll-mt-24", isReply && "ml-10 pl-4 border-l border-ink-800/50")}>
       <div className="flex gap-3">
         <Link href={`/u/${comment.agent.pubkey}`} className="shrink-0 mt-0.5">
           <AgentAvatar

@@ -7,14 +7,15 @@ import { Cpu, MessageCircle, ArrowBigUp, FileText, ArrowLeft, Loader2, Mail } fr
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { PostCard } from "@/components/PostCard";
 import { ConnectAgentModal } from "@/components/ConnectAgentModal";
-import { initLiveData, getAgent, getAgentPosts, type Agent, type Post } from "@/lib/live-data";
+import { initLiveData, getAgent, getAgentPosts, getAgentComments, type Agent, type Post, type Comment } from "@/lib/live-data";
 import { useIdentity } from "@/lib/identity-context";
-import { formatNumber } from "@/lib/utils";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 export default function AgentPage({ params }: { params: { pubkey: string } }) {
   const [loading, setLoading] = useState(true);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [agentPosts, setAgentPosts] = useState<Post[]>([]);
+  const [agentComments, setAgentComments] = useState<Comment[]>([]);
   const { identity } = useIdentity();
   const [showConnect, setShowConnect] = useState(false);
 
@@ -23,6 +24,7 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
       const a = getAgent(params.pubkey);
       setAgent(a || null);
       setAgentPosts(a ? getAgentPosts(params.pubkey) : []);
+      setAgentComments(a ? getAgentComments(params.pubkey) : []);
       setLoading(false);
     });
   }, [params.pubkey]);
@@ -131,25 +133,36 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
             {/* Stats */}
             <div className="flex items-center gap-6 pt-4 border-t border-ink-800/50">
               {[
-                { icon: FileText, label: "Posts", value: agent.stats.posts },
-                { icon: MessageCircle, label: "Comments", value: agent.stats.comments },
-                { icon: ArrowBigUp, label: "Upvotes", value: agent.stats.upvotes },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="text-center">
-                  <div className="text-lg font-bold text-white">{formatNumber(value)}</div>
-                  <div className="text-xs text-ink-500 flex items-center gap-1 justify-center">
-                    <Icon className="w-3 h-3" />
-                    {label}
+                { icon: FileText, label: "Posts", value: agent.stats.posts, href: "#posts" },
+                { icon: MessageCircle, label: "Comments", value: agent.stats.comments, href: "#comments" },
+                { icon: ArrowBigUp, label: "Upvotes", value: agent.stats.upvotes, href: undefined },
+              ].map(({ icon: Icon, label, value, href }) => {
+                const content = (
+                  <>
+                    <div className="text-lg font-bold text-white">{formatNumber(value)}</div>
+                    <div className="text-xs text-ink-500 flex items-center gap-1 justify-center">
+                      <Icon className="w-3 h-3" />
+                      {label}
+                    </div>
+                  </>
+                );
+                return href ? (
+                  <a key={label} href={href} className="text-center hover:opacity-80 transition-opacity">
+                    {content}
+                  </a>
+                ) : (
+                  <div key={label} className="text-center">
+                    {content}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
       </motion.div>
 
       {/* Agent's posts */}
-      <h2 className="text-xl font-bold text-white mb-4">Posts</h2>
+      <h2 id="posts" className="text-xl font-bold text-white mb-4 scroll-mt-24">Posts</h2>
       {agentPosts.length === 0 ? (
         <div className="glass-card p-8 text-center">
           <p className="text-ink-500">No posts yet.</p>
@@ -164,6 +177,39 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
               transition={{ duration: 0.3, delay: 0.2 + i * 0.05 }}
             >
               <PostCard post={post} />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Agent's comments */}
+      <h2 id="comments" className="text-xl font-bold text-white mb-4 mt-10 scroll-mt-24">Comments</h2>
+      {agentComments.length === 0 ? (
+        <div className="glass-card p-8 text-center">
+          <p className="text-ink-500">No comments yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {agentComments.map((comment, i) => (
+            <motion.div
+              key={comment.id}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 + i * 0.05 }}
+            >
+              <Link
+                href={`/post/${comment.postId}#comment-${comment.id}`}
+                className="glass-card p-4 block hover:border-vb-500/30 transition-colors"
+              >
+                <p className="text-sm text-ink-300 leading-relaxed line-clamp-2 mb-2">{comment.content}</p>
+                <div className="flex items-center gap-3 text-xs text-ink-500">
+                  <span className="flex items-center gap-1">
+                    <ArrowBigUp className="w-3 h-3" />
+                    {formatNumber(comment.upvotes)}
+                  </span>
+                  <span>{formatDate(comment.createdAt)}</span>
+                </div>
+              </Link>
             </motion.div>
           ))}
         </div>

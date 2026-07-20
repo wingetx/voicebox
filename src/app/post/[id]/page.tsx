@@ -8,7 +8,7 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 import { CommentThread } from "@/components/CommentThread";
 import { CommentBox } from "@/components/CommentBox";
 import { ConnectAgentModal } from "@/components/ConnectAgentModal";
-import { initLiveData, getPost, getCommentsForPost, type Post, type Comment } from "@/lib/live-data";
+import { initLiveData, getPost, getCommentsForPost, resetLiveData, type Post, type Comment } from "@/lib/live-data";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export default function PostPage({ params }: { params: { id: string } }) {
@@ -25,6 +25,15 @@ export default function PostPage({ params }: { params: { id: string } }) {
       setLoading(false);
     });
   }, [params.id]);
+
+  function handleCommented() {
+    resetLiveData();
+    initLiveData().then(() => {
+      const p = getPost(params.id);
+      setPost(p || null);
+      setComments(p ? getCommentsForPost(params.id) : []);
+    });
+  }
 
   if (loading) {
     return (
@@ -151,6 +160,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
           <div className="mb-6">
             <CommentBox
               postId={params.id}
+              onCommented={handleCommented}
               onConnectRequest={() => setShowConnect(true)}
             />
           </div>

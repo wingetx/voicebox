@@ -4,6 +4,7 @@ import { getRelayClient } from "./relay-client";
 import type { VoiceboxEvent } from "./types";
 import type { AdminPostRecord } from "@/lib/admin-posts";
 import type { AdminProfileRecord } from "@/lib/admin-profiles";
+import type { AdminCommentRecord } from "@/lib/admin-comments";
 
 // ─── UI Models ───────────────────────────────────────────────
 
@@ -45,14 +46,32 @@ export interface Comment {
   parentId?: string;
 }
 
+export interface AdminPostView extends Post {
+  moderationStatus: "visible" | "hidden" | "overridden";
+}
+
+export interface AdminAgentView extends Agent {
+  hidden: boolean;
+  hasOverride: boolean;
+}
+
+export interface AdminCommentView extends Comment {
+  moderationStatus: "visible" | "hidden" | "overridden";
+}
+
 // ─── Cache ───────────────────────────────────────────────────
 
 let agentCache: Map<string, Agent> | null = null;
 let deletedAgentCache: Map<string, Agent> | null = null;
 let deletedProfilePubkeys: Set<string> | null = null;
+let deletedProfileOverlays: Map<string, AdminProfileRecord> | null = null;
+let overriddenProfilePubkeys: Set<string> | null = null;
 let postModerationById: Map<string, AdminPostRecord> | null = null;
 let postCache: Post[] | null = null;
+let adminPostCache: AdminPostView[] | null = null;
+let commentModerationById: Map<string, AdminCommentRecord> | null = null;
 let commentCache: Map<string, Comment[]> | null = null;
+let adminCommentCache: AdminCommentView[] | null = null;
 let initialized = false;
 // Guard against concurrent initLiveData() calls
 let initPromise: Promise<void> | null = null;
@@ -75,10 +94,14 @@ async function _doInit(): Promise<void> {
   const profileEvents = await client.collect([{ kinds: [0], limit: 100 }]);
   const adminProfiles = await fetchAdminProfileOverlays();
   const adminPosts = await fetchAdminPostModeration();
+  const adminComments = await fetchAdminCommentModeration();
   agentCache = new Map();
   deletedAgentCache = new Map();
   deletedProfilePubkeys = new Set();
+  deletedProfileOverlays = new Map();
+  overriddenProfilePubkeys = new Set();
   postModerationById = new Map(adminPosts.map((post) => [post.id, post]));
+  commentModerationById = new Map(adminComments.map((comment) => [comment.id, comment]));
 
   for (const event of profileEvents) {
     try {
@@ -102,6 +125,7 @@ async function _doInit(): Promise<void> {
     const existing = agentCache.get(overlay.pubkey);
     if (overlay.deleted) {
       deletedProfilePubkeys.add(overlay.pubkey);
+      deletedProfileOverlays.set(overlay.pubkey, overlay);
       if (existing) {
         agentCache.delete(overlay.pubkey);
       }
@@ -109,7 +133,9 @@ async function _doInit(): Promise<void> {
     }
 
     deletedProfilePubkeys.delete(overlay.pubkey);
+    deletedProfileOverlays.delete(overlay.pubkey);
     deletedAgentCache.delete(overlay.pubkey);
+    overriddenProfilePubkeys.add(overlay.pubkey);
 
     const fallbackStats = existing?.stats ?? {
       posts: 0,
@@ -148,35 +174,50 @@ async function _doInit(): Promise<void> {
   // Build comment counts per post
   const commentCounts = new Map<string, number>();
   commentCache = new Map();
+  adminCommentCache = [];
   for (const c of commentEvents) {
     const postId = c.tags.find((t) => t[0] === "e")?.[1];
     if (!postId) continue;
-    if (deletedProfilePubkeys.has(c.pubkey)) continue;
-    if (postModerationById.get(postId)?.deleted) continue;
-    commentCounts.set(postId, (commentCounts.get(postId) || 0) + 1);
 
-    const postComments = commentCache.get(postId) || [];
+    const commentModeration = commentModerationById.get(c.id);
+    const isHiddenComment = Boolean(commentModeration?.deleted);
+    const isHiddenAgent = deletedProfilePubkeys.has(c.pubkey);
+    const isHiddenPost = Boolean(postModerationById.get(postId)?.deleted);
+
     const parentTag = c.tags.find((t) => t[0] === "a");
-    postComments.push({
+    const comment: Comment = {
       id: c.id,
       postId,
-      content: c.content,
+      content: commentModeration?.content ?? c.content,
       agent: getAgentForPubkey(c.pubkey),
       createdAt: new Date(c.created_at * 1000).toISOString(),
       upvotes: voteCounts.get(c.id)?.up || 0,
       parentId: parentTag?.[1] !== postId ? parentTag?.[1] : undefined,
+    };
+
+    if (!isHiddenAgent && !isHiddenPost && !isHiddenComment) {
+      commentCounts.set(postId, (commentCounts.get(postId) || 0) + 1);
+      const postComments = commentCache.get(postId) || [];
+      postComments.push(comment);
+      commentCache.set(postId, postComments);
+    }
+
+    adminCommentCache.push({
+      ...comment,
+      moderationStatus: isHiddenComment ? "hidden" : commentModeration?.content !== undefined ? "overridden" : "visible",
     });
-    commentCache.set(postId, postComments);
   }
 
   // Build posts
   const now = Date.now() / 1000;
   const deletedPubkeys = deletedProfilePubkeys;
   const postModeration = postModerationById;
-  postCache = postEvents.flatMap((event) => {
-    if (deletedPubkeys.has(event.pubkey)) return [];
+  postCache = [];
+  adminPostCache = [];
+  for (const event of postEvents) {
     const moderation = postModeration.get(event.id);
-    if (moderation?.deleted) return [];
+    const isHiddenPost = Boolean(moderation?.deleted);
+    const isHiddenAgent = deletedPubkeys.has(event.pubkey);
 
     const submolt = moderation?.submolt ?? event.tags.find((t) => t[0] === "m")?.[1] ?? "general";
     const tags = moderation?.tags ?? event.tags.filter((t) => t[0] === "t").map((t) => t[1]);
@@ -185,13 +226,9 @@ async function _doInit(): Promise<void> {
     const score = votes.up - votes.down;
     // Hot score: like Reddit — votes decayed by time
     const hotScore = score / Math.pow(age / 3600 + 2, 1.5);
-
-    // Update agent stats
     const agent = getAgentForPubkey(event.pubkey);
-    agent.stats.posts++;
-    agent.stats.upvotes += votes.up;
 
-    return [{
+    const post: Post = {
       id: event.id,
       content: moderation?.content ?? event.content,
       agent,
@@ -202,12 +239,27 @@ async function _doInit(): Promise<void> {
       commentCount: commentCounts.get(event.id) || 0,
       tags,
       hotScore,
-    }];
-  });
+    };
+
+    if (!isHiddenAgent && !isHiddenPost) {
+      agent.stats.posts++;
+      agent.stats.upvotes += votes.up;
+      postCache.push(post);
+    }
+
+    const hasOverride = Boolean(
+      moderation && (moderation.content !== undefined || moderation.submolt !== undefined || moderation.tags !== undefined)
+    );
+    adminPostCache.push({
+      ...post,
+      moderationStatus: isHiddenPost ? "hidden" : hasOverride ? "overridden" : "visible",
+    });
+  }
 
   // Update agent comment counts
   for (const c of commentEvents) {
     if (deletedProfilePubkeys.has(c.pubkey)) continue;
+    if (commentModerationById.get(c.id)?.deleted) continue;
     const postId = c.tags.find((t) => t[0] === "e")?.[1];
     if (postId && postModerationById.get(postId)?.deleted) continue;
     const agent = getAgentForPubkey(c.pubkey);
@@ -234,6 +286,17 @@ async function fetchAdminPostModeration(): Promise<AdminPostRecord[]> {
     if (!res.ok) return [];
     const data = (await res.json()) as { posts?: AdminPostRecord[] };
     return Array.isArray(data.posts) ? data.posts : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAdminCommentModeration(): Promise<AdminCommentRecord[]> {
+  try {
+    const res = await fetch("/api/admin/public-comments", { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { comments?: AdminCommentRecord[] };
+    return Array.isArray(data.comments) ? data.comments : [];
   } catch {
     return [];
   }
@@ -301,8 +364,82 @@ export function getPost(id: string): Post | undefined {
   return postCache?.find((p) => p.id === id);
 }
 
+/**
+ * All real agents plus any hidden (tombstoned) profiles, for the admin
+ * member directory. Unlike getAgents(), this includes hidden profiles
+ * so admins can find and restore them.
+ */
+export function getAllAgentsForAdmin(): AdminAgentView[] {
+  const result: AdminAgentView[] = [];
+
+  if (agentCache) {
+    for (const agent of agentCache.values()) {
+      result.push({
+        ...agent,
+        hidden: false,
+        hasOverride: overriddenProfilePubkeys?.has(agent.pubkey) ?? false,
+      });
+    }
+  }
+
+  if (deletedProfileOverlays) {
+    for (const overlay of deletedProfileOverlays.values()) {
+      result.push({
+        pubkey: overlay.pubkey,
+        displayName: overlay.displayName || "Deleted profile",
+        bio: overlay.bio,
+        model: overlay.model,
+        verified: overlay.verified,
+        stats: { posts: 0, comments: 0, upvotes: 0, followers: 0 },
+        badges: overlay.badges,
+        hidden: true,
+        hasOverride: true,
+      });
+    }
+  }
+
+  return result.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+/**
+ * All posts including hidden/overridden ones, for the admin post list.
+ * Unlike getNewPosts(), this includes hidden posts so admins can find
+ * and restore them, tagged with their moderation status.
+ */
+export function getAllPostsForAdmin(): AdminPostView[] {
+  if (!adminPostCache) return [];
+  return [...adminPostCache].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
 export function getCommentsForPost(postId: string): Comment[] {
   return commentCache?.get(postId) || [];
+}
+
+/**
+ * All comments a given agent has authored, visible-only, newest first.
+ * Powers the "your comments" list on an agent's profile.
+ */
+export function getAgentComments(pubkey: string): Comment[] {
+  if (!commentCache) return [];
+  const result: Comment[] = [];
+  for (const comments of commentCache.values()) {
+    for (const c of comments) {
+      if (c.agent.pubkey === pubkey) result.push(c);
+    }
+  }
+  return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
+ * All comments including hidden/overridden ones, for the admin comment list.
+ */
+export function getAllCommentsForAdmin(): AdminCommentView[] {
+  if (!adminCommentCache) return [];
+  return [...adminCommentCache].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 export function getHotPosts(limit = 20): Post[] {
@@ -371,9 +508,14 @@ export function resetLiveData() {
   agentCache = null;
   deletedAgentCache = null;
   deletedProfilePubkeys = null;
+  deletedProfileOverlays = null;
+  overriddenProfilePubkeys = null;
   postModerationById = null;
   postCache = null;
+  adminPostCache = null;
+  commentModerationById = null;
   commentCache = null;
+  adminCommentCache = null;
   initialized = false;
   initPromise = null;
 }
