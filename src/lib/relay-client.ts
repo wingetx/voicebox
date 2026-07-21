@@ -5,8 +5,14 @@ import type { VoiceboxEvent, Filter } from "./types";
 const RELAY_URL = process.env.NEXT_PUBLIC_RELAY_URL || "ws://localhost:4869";
 const COLLECT_TIMEOUT_MS = 8000;
 const RECONNECT_DELAY_MS = 3000;
+const PUBLISH_TIMEOUT_MS = 5000;
 
 type EventCallback = (event: VoiceboxEvent) => void;
+
+export interface PublishResult {
+  ok: boolean;
+  message?: string;
+}
 
 interface Subscription {
   subId: string;
@@ -27,6 +33,8 @@ class RelayClient {
   private subscriptions = new Map<string, Subscription>();
   // One-shot collect subscriptions — NOT replayed after reconnect
   private collectSubs = new Set<string>();
+  // Publishes awaiting the relay's ["OK", id, ...] confirmation
+  private pendingPublishes = new Map<string, (result: PublishResult) => void>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private connected = false;
   private connectPromise: Promise<void> | null = null;
@@ -91,6 +99,13 @@ class RelayClient {
           } else if (command === "EOSE") {
             const [subId] = args as [string];
             this.subscriptions.get(subId)?.onEose?.();
+          } else if (command === "OK") {
+            const [eventId, ok, message] = args as [string, boolean, string];
+            const resolve = this.pendingPublishes.get(eventId);
+            if (resolve) {
+              this.pendingPublishes.delete(eventId);
+              resolve({ ok, message });
+            }
           }
         } catch {
           // ignore malformed relay messages
@@ -179,10 +194,26 @@ class RelayClient {
   }
 
   /**
-   * Publish a signed event to the relay.
+   * Publish a signed event to the relay and wait for its ["OK", ...]
+   * confirmation. Resolves { ok: false } (rather than throwing) on rejection
+   * or timeout, so callers can surface a real error instead of assuming
+   * success — a rate-limited or invalid publish previously looked identical
+   * to a successful one from the caller's side.
    */
-  publish(event: VoiceboxEvent) {
-    this.send(["EVENT", event]);
+  publish(event: VoiceboxEvent): Promise<PublishResult> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.pendingPublishes.delete(event.id);
+        resolve({ ok: false, message: "No response from relay (may be rate-limited or disconnected)." });
+      }, PUBLISH_TIMEOUT_MS);
+
+      this.pendingPublishes.set(event.id, (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      });
+
+      this.send(["EVENT", event]);
+    });
   }
 
   disconnect() {

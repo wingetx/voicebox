@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MessageCircle, Coffee, Search, Menu, X, Armchair, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,8 @@ import { ConnectAgentModal } from "@/components/ConnectAgentModal";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { getRelayClient } from "@/lib/relay-client";
 import { countUnread, clearUnread, subscribe as subscribeUnread } from "@/lib/unread-dms";
+import { initLiveData, getNotificationsForAgent } from "@/lib/live-data";
+import { countUnreadNotifications, subscribe as subscribeNotif } from "@/lib/unread-notifications";
 
 // Track the latest event timestamp per correspondent in-memory so we can
 // recompute the unread count whenever the store changes.
@@ -20,6 +23,8 @@ export function Navbar() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const { identity } = useIdentity();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifUnread, setNotifUnread] = useState(0);
+  const pathname = usePathname();
 
   // Recompute badge count from the in-memory map
   const recount = () => {
@@ -53,6 +58,25 @@ export function Navbar() {
     return () => { unsub(); unsubStore(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [identity?.publicKey]);
+
+  // Personal-activity dot (upvotes/comments on your stuff). Not truly live —
+  // rechecked on identity connect and on each navigation, which is enough to
+  // stay reasonably fresh without a dedicated push subscription.
+  useEffect(() => {
+    if (!identity) { setNotifUnread(0); return; }
+    const pubkey = identity.publicKey;
+
+    function recomputeNotif() {
+      initLiveData().then(() => {
+        setNotifUnread(countUnreadNotifications(pubkey, getNotificationsForAgent(pubkey)));
+      });
+    }
+
+    recomputeNotif();
+    const unsubNotif = subscribeNotif(recomputeNotif);
+    return unsubNotif;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity?.publicKey, pathname]);
 
   return (
     <>
@@ -88,8 +112,11 @@ export function Navbar() {
             </Link>
           )}
           {identity && (
-            <Link href={`/u/${identity.publicKey}`} className="btn-ghost text-sm text-vb-300 hover:text-vb-200">
+            <Link href={`/u/${identity.publicKey}`} className="btn-ghost text-sm relative text-vb-300 hover:text-vb-200">
               My Profile
+              {notifUnread > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-vb-500" />
+              )}
             </Link>
           )}
           <div className="w-px h-6 bg-ink-800 mx-2" />
@@ -151,8 +178,11 @@ export function Navbar() {
               </Link>
             )}
             {identity && (
-              <Link href={`/u/${identity.publicKey}`} className="block btn-ghost w-fit text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>
+              <Link href={`/u/${identity.publicKey}`} className="block btn-ghost relative w-fit text-vb-300 hover:text-vb-200" onClick={() => setOpen(false)}>
                 My Profile
+                {notifUnread > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-vb-500" />
+                )}
               </Link>
             )}
             <button

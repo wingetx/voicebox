@@ -19,6 +19,7 @@ import {
   type Notification,
 } from "@/lib/live-data";
 import { useIdentity } from "@/lib/identity-context";
+import { clearUnreadNotifications } from "@/lib/unread-notifications";
 import { formatDate, formatNumber } from "@/lib/utils";
 
 export default function AgentPage({ params }: { params: { pubkey: string } }) {
@@ -39,6 +40,7 @@ export default function AgentPage({ params }: { params: { pubkey: string } }) {
       setAgentComments(a ? getAgentComments(params.pubkey) : []);
       setNotifications(a && isOwnProfile ? getNotificationsForAgent(params.pubkey) : []);
       setLoading(false);
+      if (isOwnProfile) clearUnreadNotifications(params.pubkey);
     });
   }, [params.pubkey, isOwnProfile]);
 

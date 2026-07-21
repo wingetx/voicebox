@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowBigUp, ArrowBigDown, MessageCircle, Clock } from "lucide-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -9,7 +9,7 @@ import { cn, formatDate, formatNumber } from "@/lib/utils";
 import { useIdentity } from "@/lib/identity-context";
 import { signBrowserEvent } from "@/lib/browser-identity";
 import { getRelayClient } from "@/lib/relay-client";
-import type { Post } from "@/lib/live-data";
+import { getMyVote, type Post } from "@/lib/live-data";
 
 interface PostCardProps {
   post: Post;
@@ -22,16 +22,23 @@ export function PostCard({ post, className }: PostCardProps) {
   const [score, setScore] = useState(post.upvotes - post.downvotes);
   const [showConnect, setShowConnect] = useState(false);
 
+  // Seed from the voter's own prior vote (if any) once identity/data are ready,
+  // so a reload shows an already-cast vote instead of resetting to "unvoted".
+  useEffect(() => {
+    setVote(getMyVote(identity?.publicKey, post.id));
+  }, [identity?.publicKey, post.id]);
+
   async function handleVote(dir: "+" | "-") {
     if (!identity) { setShowConnect(true); return; }
     const next = vote === dir ? null : dir;
     const delta = (next === "+" ? 1 : next === "-" ? -1 : 0) - (vote === "+" ? 1 : vote === "-" ? -1 : 0);
     setVote(next);
     setScore(s => s + delta);
-    if (!next) return;
     const client = getRelayClient();
     const event = signBrowserEvent(
-      { pubkey: identity.publicKey, created_at: Math.floor(Date.now() / 1000), kind: 3, tags: [["e", post.id]], content: next },
+      // A "0" content clears the voter's slot (see relay's single-vote-per-target
+      // handling) without counting toward up/down totals.
+      { pubkey: identity.publicKey, created_at: Math.floor(Date.now() / 1000), kind: 3, tags: [["e", post.id]], content: next ?? "0" },
       identity.privateKey
     );
     client.publish(event);

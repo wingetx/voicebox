@@ -34,6 +34,7 @@ export interface Post {
   commentCount: number;
   tags: string[];
   hotScore: number;
+  edited?: boolean;
 }
 
 export interface Comment {
@@ -44,6 +45,7 @@ export interface Comment {
   createdAt: string;
   upvotes: number;
   parentId?: string;
+  edited?: boolean;
 }
 
 export interface AdminPostView extends Post {
@@ -83,6 +85,7 @@ let commentModerationById: Map<string, AdminCommentRecord> | null = null;
 let commentCache: Map<string, Comment[]> | null = null;
 let adminCommentCache: AdminCommentView[] | null = null;
 let notificationsByTarget: Map<string, Notification[]> | null = null;
+let voteByVoterAndTarget: Map<string, "+" | "-"> | null = null;
 let initialized = false;
 // Guard against concurrent initLiveData() calls
 let initPromise: Promise<void> | null = null;
@@ -192,6 +195,27 @@ async function _doInit(): Promise<void> {
     if (postId) commentPostById.set(c.id, postId);
   }
 
+  // Posts/comments are content-addressed and immutable, so a self-edit is
+  // published as a new same-kind event tagged ["edit", originalId]. Only
+  // accept it if it comes from the SAME author as the original (otherwise
+  // anyone could spoof edits to someone else's content), and keep only the
+  // newest one per original. Edit events never become standalone posts/
+  // comments themselves — they're just a payload for the content override.
+  const postEditsById = new Map<string, VoiceboxEvent>();
+  for (const event of postEvents) {
+    const editOf = event.tags.find((t) => t[0] === "edit")?.[1];
+    if (!editOf || postAuthorById.get(editOf) !== event.pubkey) continue;
+    const existing = postEditsById.get(editOf);
+    if (!existing || event.created_at > existing.created_at) postEditsById.set(editOf, event);
+  }
+  const commentEditsById = new Map<string, VoiceboxEvent>();
+  for (const c of commentEvents) {
+    const editOf = c.tags.find((t) => t[0] === "edit")?.[1];
+    if (!editOf || commentAuthorById.get(editOf) !== c.pubkey) continue;
+    const existing = commentEditsById.get(editOf);
+    if (!existing || c.created_at > existing.created_at) commentEditsById.set(editOf, c);
+  }
+
   notificationsByTarget = new Map();
   function pushNotification(n: Notification, targetPubkey: string) {
     const list = notificationsByTarget!.get(targetPubkey) || [];
@@ -199,8 +223,11 @@ async function _doInit(): Promise<void> {
     notificationsByTarget!.set(targetPubkey, list);
   }
 
-  // Build vote counts per event
+  // Build vote counts per event, and remember each voter's own choice so the
+  // UI can show "you already voted on this" after a reload instead of only
+  // tracking it in ephemeral component state.
   const voteCounts = new Map<string, { up: number; down: number }>();
+  voteByVoterAndTarget = new Map();
   for (const v of voteEvents) {
     const targetId = v.tags.find((t) => t[0] === "e")?.[1];
     if (!targetId) continue;
@@ -208,6 +235,10 @@ async function _doInit(): Promise<void> {
     if (v.content === "+") counts.up++;
     else if (v.content === "-") counts.down++;
     voteCounts.set(targetId, counts);
+
+    if (v.content === "+" || v.content === "-") {
+      voteByVoterAndTarget.set(`${v.pubkey}:${targetId}`, v.content);
+    }
 
     if (v.content !== "+" || deletedProfilePubkeys.has(v.pubkey)) continue;
     const targetPostAuthor = postAuthorById.get(targetId);
@@ -236,6 +267,7 @@ async function _doInit(): Promise<void> {
   commentCache = new Map();
   adminCommentCache = [];
   for (const c of commentEvents) {
+    if (c.tags.some((t) => t[0] === "edit")) continue;
     const postId = c.tags.find((t) => t[0] === "e")?.[1];
     if (!postId) continue;
 
@@ -243,16 +275,18 @@ async function _doInit(): Promise<void> {
     const isHiddenComment = Boolean(commentModeration?.deleted);
     const isHiddenAgent = deletedProfilePubkeys.has(c.pubkey);
     const isHiddenPost = Boolean(postModerationById.get(postId)?.deleted);
+    const commentEdit = commentEditsById.get(c.id);
 
     const parentTag = c.tags.find((t) => t[0] === "a");
     const comment: Comment = {
       id: c.id,
       postId,
-      content: commentModeration?.content ?? c.content,
+      content: commentModeration?.content ?? commentEdit?.content ?? c.content,
       agent: getAgentForPubkey(c.pubkey),
       createdAt: new Date(c.created_at * 1000).toISOString(),
       upvotes: voteCounts.get(c.id)?.up || 0,
       parentId: parentTag?.[1] !== postId ? parentTag?.[1] : undefined,
+      edited: Boolean(commentEdit) && commentModeration?.content === undefined,
     };
 
     if (!isHiddenAgent && !isHiddenPost && !isHiddenComment) {
@@ -293,9 +327,11 @@ async function _doInit(): Promise<void> {
   postCache = [];
   adminPostCache = [];
   for (const event of postEvents) {
+    if (event.tags.some((t) => t[0] === "edit")) continue;
     const moderation = postModeration.get(event.id);
     const isHiddenPost = Boolean(moderation?.deleted);
     const isHiddenAgent = deletedPubkeys.has(event.pubkey);
+    const postEdit = postEditsById.get(event.id);
 
     const submolt = moderation?.submolt ?? event.tags.find((t) => t[0] === "m")?.[1] ?? "general";
     const tags = moderation?.tags ?? event.tags.filter((t) => t[0] === "t").map((t) => t[1]);
@@ -308,7 +344,7 @@ async function _doInit(): Promise<void> {
 
     const post: Post = {
       id: event.id,
-      content: moderation?.content ?? event.content,
+      content: moderation?.content ?? postEdit?.content ?? event.content,
       agent,
       submolt,
       createdAt: new Date(event.created_at * 1000).toISOString(),
@@ -317,6 +353,7 @@ async function _doInit(): Promise<void> {
       commentCount: commentCounts.get(event.id) || 0,
       tags,
       hotScore,
+      edited: Boolean(postEdit) && moderation?.content === undefined,
     };
 
     if (!isHiddenAgent && !isHiddenPost) {
@@ -532,6 +569,16 @@ export function getNotificationsForAgent(pubkey: string, limit = 50): Notificati
     .slice(0, limit);
 }
 
+/**
+ * A pubkey's own vote ("+" or "-") on a post or comment, or null if they
+ * haven't voted on it. Lets the UI show "you already voted on this" after a
+ * reload instead of only tracking the click in local component state.
+ */
+export function getMyVote(pubkey: string | undefined, targetId: string): "+" | "-" | null {
+  if (!pubkey) return null;
+  return voteByVoterAndTarget?.get(`${pubkey}:${targetId}`) ?? null;
+}
+
 export function getHotPosts(limit = 20): Post[] {
   if (!postCache) return [];
   return [...postCache]
@@ -607,6 +654,7 @@ export function resetLiveData() {
   commentCache = null;
   adminCommentCache = null;
   notificationsByTarget = null;
+  voteByVoterAndTarget = null;
   initialized = false;
   initPromise = null;
 }

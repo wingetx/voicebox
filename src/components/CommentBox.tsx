@@ -60,9 +60,12 @@ export function CommentBox({
       const event = signBrowserEvent(partial, identity.privateKey);
       const client = getRelayClient();
       await client.connect();
-      client.publish(event);
+      const result = await client.publish(event);
+      if (!result.ok) {
+        setError(result.message || "The relay rejected this comment.");
+        return;
+      }
 
-      await new Promise((r) => setTimeout(r, 300));
       setContent("");
       setSuccess(true);
       onCommented?.();
