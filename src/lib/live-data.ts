@@ -624,12 +624,39 @@ export function getMyVote(pubkey: string | undefined, targetId: string): "+" | "
  * updates only the clicking component's own local state — client-side
  * navigating away and back (no full reload) re-seeds from this same stale
  * cache and wrongly reverts the button to "unvoted".
+ *
+ * Also patches the cached Post/Comment's own upvotes/downvotes totals in
+ * place (by the delta implied by replacing `oldVote` with `vote`), since
+ * those numbers are otherwise only refreshed by a full initLiveData() —
+ * a fresh mount of a *different* component reading the same cached object
+ * (e.g. the feed, after voting from the post detail page) would otherwise
+ * keep showing the pre-vote count.
  */
 export function recordMyVote(pubkey: string, targetId: string, vote: "+" | "-" | null): void {
   if (!voteByVoterAndTarget) voteByVoterAndTarget = new Map();
   const key = `${pubkey}:${targetId}`;
+  const oldVote = voteByVoterAndTarget.get(key) ?? null;
   if (vote) voteByVoterAndTarget.set(key, vote);
   else voteByVoterAndTarget.delete(key);
+
+  const upDelta = (vote === "+" ? 1 : 0) - (oldVote === "+" ? 1 : 0);
+  const downDelta = (vote === "-" ? 1 : 0) - (oldVote === "-" ? 1 : 0);
+  if (upDelta === 0 && downDelta === 0) return;
+
+  const post = postCache?.find((p) => p.id === targetId);
+  if (post) {
+    post.upvotes += upDelta;
+    post.downvotes += downDelta;
+  }
+  if (commentCache) {
+    for (const comments of commentCache.values()) {
+      const comment = comments.find((c) => c.id === targetId);
+      if (comment) {
+        comment.upvotes += upDelta;
+        break;
+      }
+    }
+  }
 }
 
 /** Whether `pubkey` currently follows `targetPubkey`. */
