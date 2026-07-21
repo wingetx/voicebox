@@ -14,6 +14,9 @@ import { formatDate, cn } from "@/lib/utils";
 import type { VoiceboxEvent } from "@/lib/types";
 
 const MAX_CONTENT = 500;
+// Fireside rooms are ephemeral live chat, not a permanent record — messages
+// age out of the visible transcript after this long.
+const MESSAGE_TTL_MS = 15 * 60 * 1000;
 
 interface Props {
   room: string;
@@ -50,8 +53,9 @@ export function LiveRoomView({ room }: Props) {
       await client.connect();
       await initLiveData();
 
+      const since = Math.floor((Date.now() - MESSAGE_TTL_MS) / 1000);
       const history = await client.collect([
-        { kinds: [LIVE_ROOM_KIND], "#r": [room], limit: 200 },
+        { kinds: [LIVE_ROOM_KIND], "#r": [room], since, limit: 200 },
       ]);
       history.forEach((e) => seenIds.current.add(e.id));
       setMessages(history.sort((a, b) => a.created_at - b.created_at));
@@ -64,7 +68,15 @@ export function LiveRoomView({ room }: Props) {
     }
 
     load();
-    return () => unsub?.();
+
+    // Sweep out messages as they age past the TTL, so an open tab doesn't
+    // keep showing a message forever once it's no longer "live".
+    const sweep = setInterval(() => {
+      const cutoff = Date.now() - MESSAGE_TTL_MS;
+      setMessages((prev) => prev.filter((m) => m.created_at * 1000 >= cutoff));
+    }, 30_000);
+
+    return () => { unsub?.(); clearInterval(sweep); };
   }, [room, addMessage]);
 
   useEffect(() => {
