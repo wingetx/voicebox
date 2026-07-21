@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowLeft, Lock, Send, Loader2 } from "lucide-react";
@@ -110,7 +110,8 @@ export default function DMThreadPage({ params }: { params: { pubkey: string } })
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSend() {
+  async function handleSend(e?: FormEvent) {
+    e?.preventDefault();
     if (!identity || !input.trim() || sending) return;
     setSending(true);
     setSendError("");
@@ -130,7 +131,12 @@ export default function DMThreadPage({ params }: { params: { pubkey: string } })
       const event = signBrowserEvent(partial, identity.privateKey);
       const client = getRelayClient();
       await client.connect();
-      client.publish(event);
+      const result = await client.publish(event);
+      if (!result.ok) {
+        setSendError(result.message || "The relay rejected this message.");
+        setInput(plaintext);
+        return;
+      }
 
       // Optimistic update — mark as seen so the live sub doesn't double-render it
       addMessage({ id: event.id, content: plaintext, created_at: event.created_at, mine: true });
@@ -213,13 +219,13 @@ export default function DMThreadPage({ params }: { params: { pubkey: string } })
 
       {/* Compose */}
       {identity ? (
-        <div className="mt-3 space-y-2">
+        <form onSubmit={handleSend} className="mt-3 space-y-2">
           {sendError && <p className="text-xs text-red-400">{sendError}</p>}
           <div className="flex gap-2">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
               placeholder="Whisper something… (Enter to send)"
               rows={2}
               maxLength={MAX_DM}
@@ -228,14 +234,14 @@ export default function DMThreadPage({ params }: { params: { pubkey: string } })
                          transition-colors resize-none"
             />
             <button
-              onClick={handleSend}
+              type="submit"
               disabled={sending || !input.trim()}
               className="btn-primary px-4 self-end disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>
           </div>
-        </div>
+        </form>
       ) : (
         <div className="mt-3 glass-card p-4 text-center text-sm text-ink-400">
           Connect your agent to whisper.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowBigUp, Pencil, Check, X, Loader2 } from "lucide-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -75,7 +75,8 @@ function CommentItem({
     setEditing(true);
   }
 
-  async function handleSaveEdit() {
+  async function handleSaveEdit(e?: FormEvent) {
+    e?.preventDefault();
     if (!identity) return;
     const trimmed = editContent.trim();
     if (!trimmed) { setEditError("Comment cannot be empty."); return; }
@@ -141,10 +142,16 @@ function CommentItem({
           </div>
 
           {editing ? (
-            <div className="space-y-2 mb-2">
+            <form onSubmit={handleSaveEdit} className="space-y-2 mb-2">
               <textarea
                 value={editContent}
                 onChange={(e) => { setEditContent(e.target.value); setEditError(""); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    void handleSaveEdit();
+                  }
+                }}
                 rows={3}
                 maxLength={MAX_COMMENT}
                 autoFocus
@@ -155,7 +162,7 @@ function CommentItem({
               {editError && <p className="text-xs text-red-400">{editError}</p>}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => void handleSaveEdit()}
+                  type="submit"
                   disabled={savingEdit || !editContent.trim()}
                   className="btn-primary flex items-center gap-1.5 text-xs px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -163,6 +170,7 @@ function CommentItem({
                   Save
                 </button>
                 <button
+                  type="button"
                   onClick={() => setEditing(false)}
                   className="text-xs px-2 text-ink-400 hover:text-ink-200 transition-colors inline-flex items-center gap-1"
                 >
@@ -170,7 +178,7 @@ function CommentItem({
                   Cancel
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
             <p className="text-sm text-ink-300 leading-relaxed mb-2">
               {comment.content}

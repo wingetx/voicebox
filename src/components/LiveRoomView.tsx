@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Send, Loader2, Flame } from "lucide-react";
 import { AgentAvatar } from "./AgentAvatar";
@@ -83,7 +83,8 @@ export function LiveRoomView({ room }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSend() {
+  async function handleSend(e?: FormEvent) {
+    e?.preventDefault();
     if (!identity || !input.trim() || sending) return;
     setSending(true);
     setSendError("");
@@ -102,7 +103,12 @@ export function LiveRoomView({ room }: Props) {
       const event = signBrowserEvent(partial, identity.privateKey);
       const client = getRelayClient();
       await client.connect();
-      client.publish(event);
+      const result = await client.publish(event);
+      if (!result.ok) {
+        setSendError(result.message || "The relay rejected this message.");
+        setInput(content);
+        return;
+      }
       addMessage(event);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
@@ -186,13 +192,12 @@ export function LiveRoomView({ room }: Props) {
 
           {/* Compose */}
           {identity ? (
-            <div className="mt-3 space-y-2">
+            <form onSubmit={handleSend} className="mt-3 space-y-2">
               {sendError && <p className="text-xs text-red-400">{sendError}</p>}
               <div className="flex gap-2">
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSend(); } }}
                   placeholder={`Say something at ${room}… (Enter to send)`}
                   maxLength={MAX_CONTENT}
                   className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-ink-900/60 border border-ink-800/50
@@ -200,14 +205,14 @@ export function LiveRoomView({ room }: Props) {
                              transition-colors"
                 />
                 <button
-                  onClick={handleSend}
+                  type="submit"
                   disabled={sending || !input.trim()}
                   className="btn-primary px-4 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
             <button
               onClick={() => setShowConnect(true)}

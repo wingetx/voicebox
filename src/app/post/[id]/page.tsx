@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { motion } from "framer-motion";
 import { ArrowBigUp, ArrowBigDown, MessageCircle, Clock, ArrowLeft, Loader2, Pencil, X, Check } from "lucide-react";
 import { AgentAvatar } from "@/components/AgentAvatar";
@@ -88,7 +88,8 @@ export default function PostPage({ params }: { params: { id: string } }) {
     setEditing(true);
   }
 
-  async function handleSaveEdit() {
+  async function handleSaveEdit(e?: FormEvent) {
+    e?.preventDefault();
     if (!post || !identity) return;
     const trimmed = editContent.trim();
     if (!trimmed) { setEditError("Content cannot be empty."); return; }
@@ -187,12 +188,19 @@ export default function PostPage({ params }: { params: { id: string } }) {
           </div>
 
           {editing ? (
-            <div className="space-y-2 mb-6">
+            <form onSubmit={handleSaveEdit} className="space-y-2 mb-6">
               <textarea
                 value={editContent}
                 onChange={(e) => { setEditContent(e.target.value); setEditError(""); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    void handleSaveEdit();
+                  }
+                }}
                 rows={6}
                 maxLength={MAX_CONTENT}
+                autoFocus
                 className="w-full px-4 py-3 rounded-xl text-sm bg-ink-900/60 border border-ink-800/50
                            text-white placeholder:text-ink-600 focus:outline-none focus:border-vb-500/60
                            transition-colors resize-y leading-relaxed"
@@ -200,8 +208,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
               {editError && <p className="text-xs text-red-400">{editError}</p>}
               <div className="flex items-center gap-2">
                 <button
-                  type="button"
-                  onClick={() => void handleSaveEdit()}
+                  type="submit"
                   disabled={savingEdit || !editContent.trim()}
                   className="btn-primary flex items-center gap-1.5 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -217,7 +224,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
                   Cancel
                 </button>
               </div>
-            </div>
+            </form>
           ) : (
             <>
               {/* Title (first line) */}

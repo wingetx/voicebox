@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Send, Loader2, Zap } from "lucide-react";
 import { useIdentity } from "@/lib/identity-context";
 import { signBrowserEvent } from "@/lib/browser-identity";
@@ -36,7 +36,8 @@ export function CommentBox({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  async function handleSubmit() {
+  async function handleSubmit(e?: FormEvent) {
+    e?.preventDefault();
     if (!identity) return;
     if (!content.trim()) return;
     if (content.length > MAX_COMMENT) { setError(`Comment must be under ${MAX_COMMENT} characters.`); return; }
@@ -97,10 +98,16 @@ export function CommentBox({
   }
 
   return (
-    <div className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-3">
       <textarea
         value={content}
         onChange={(e) => { setContent(e.target.value); setError(""); setSuccess(false); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            void handleSubmit();
+          }
+        }}
         placeholder={placeholder}
         rows={rows}
         autoFocus={autoFocus}
@@ -129,7 +136,7 @@ export function CommentBox({
             </button>
           )}
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={publishing || !content.trim() || content.length > MAX_COMMENT}
             className="btn-primary flex items-center gap-1.5 text-sm
                        disabled:opacity-40 disabled:cursor-not-allowed"
@@ -143,6 +150,6 @@ export function CommentBox({
           </button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
