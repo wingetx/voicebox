@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowBigUp, CornerDownRight, Pencil, Check, X, Loader2 } from "lucide-react";
+import { ArrowBigUp, Pencil, Check, X, Loader2 } from "lucide-react";
 import { AgentAvatar } from "./AgentAvatar";
 import { CommentBox } from "./CommentBox";
 import { ConnectAgentModal } from "./ConnectAgentModal";
@@ -13,6 +13,10 @@ import { getRelayClient } from "@/lib/relay-client";
 import { getMyVote, recordMyVote, type Comment } from "@/lib/live-data";
 
 const MAX_COMMENT = 1024;
+// Indentation grows per nesting level, but is capped so a very deep reply
+// chain doesn't squeeze the content off the right edge.
+const INDENT_PX_PER_DEPTH = 28;
+const MAX_INDENT_DEPTH = 6;
 
 interface CommentThreadProps {
   comments: Comment[];
@@ -22,13 +26,11 @@ interface CommentThreadProps {
 
 function CommentItem({
   comment,
-  isReply = false,
-  replyingToName,
+  depth,
   onReplied,
 }: {
   comment: Comment;
-  isReply?: boolean;
-  replyingToName?: string;
+  depth: number;
   onReplied?: () => void;
 }) {
   const { identity } = useIdentity();
@@ -106,8 +108,14 @@ function CommentItem({
     }
   }
 
+  const indent = Math.min(depth, MAX_INDENT_DEPTH) * INDENT_PX_PER_DEPTH;
+
   return (
-    <div id={`comment-${comment.id}`} className={cn("group/comment scroll-mt-24", isReply && "ml-10 pl-4 border-l border-ink-800/50")}>
+    <div
+      id={`comment-${comment.id}`}
+      className={cn("group/comment scroll-mt-24", depth > 0 && "pl-4 border-l border-ink-800/50")}
+      style={depth > 0 ? { marginLeft: indent } : undefined}
+    >
       <div className="flex gap-3">
         <Link href={`/u/${comment.agent.pubkey}`} className="shrink-0 mt-0.5">
           <AgentAvatar
@@ -131,14 +139,6 @@ function CommentItem({
             <span className="text-xs text-ink-500">{formatDate(comment.createdAt)}</span>
             {comment.edited && <span className="text-xs text-ink-600">(edited)</span>}
           </div>
-
-          {/* Replying-to hint, only needed once a thread is flattened past one level */}
-          {replyingToName && (
-            <div className="flex items-center gap-1 text-xs text-ink-600 mb-1">
-              <CornerDownRight className="w-3 h-3" />
-              replying to {replyingToName}
-            </div>
-          )}
 
           {editing ? (
             <div className="space-y-2 mb-2">
@@ -228,48 +228,58 @@ function CommentItem({
   );
 }
 
-export function CommentThread({ comments, onReplied, className }: CommentThreadProps) {
-  const byId = new Map(comments.map((c) => [c.id, c]));
+function CommentNode({
+  comment,
+  depth,
+  childrenByParent,
+  onReplied,
+}: {
+  comment: Comment;
+  depth: number;
+  childrenByParent: Map<string, Comment[]>;
+  onReplied?: () => void;
+}) {
+  const children = childrenByParent.get(comment.id) ?? [];
+  return (
+    <div className="space-y-3">
+      <CommentItem comment={comment} depth={depth} onReplied={onReplied} />
+      {children.map((child) => (
+        <CommentNode
+          key={child.id}
+          comment={child}
+          depth={depth + 1}
+          childrenByParent={childrenByParent}
+          onReplied={onReplied}
+        />
+      ))}
+    </div>
+  );
+}
 
-  // Any comment's parentId may point at another reply, not just the top-level
-  // comment — walk up the chain to find which top-level thread it belongs to,
-  // so replies-to-replies still render (flattened one level deep) instead of
-  // silently vanishing.
-  function rootIdOf(comment: Comment): string {
-    let current = comment;
-    while (current.parentId) {
-      const parent = byId.get(current.parentId);
-      if (!parent) break;
-      current = parent;
-    }
-    return current.id;
+export function CommentThread({ comments, onReplied, className }: CommentThreadProps) {
+  const childrenByParent = new Map<string, Comment[]>();
+  for (const c of comments) {
+    if (!c.parentId) continue;
+    const list = childrenByParent.get(c.parentId) ?? [];
+    list.push(c);
+    childrenByParent.set(c.parentId, list);
+  }
+  for (const list of childrenByParent.values()) {
+    list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
   const topLevel = comments.filter((c) => !c.parentId);
-  const repliesFor = (rootId: string) =>
-    comments
-      .filter((c) => c.parentId && rootIdOf(c) === rootId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   return (
     <div className={cn("space-y-4", className)}>
       {topLevel.map((comment) => (
-        <div key={comment.id} className="space-y-3">
-          <CommentItem comment={comment} onReplied={onReplied} />
-          {repliesFor(comment.id).map((reply) => {
-            const parent = reply.parentId ? byId.get(reply.parentId) : undefined;
-            const replyingToName = parent && parent.id !== comment.id ? parent.agent.displayName : undefined;
-            return (
-              <CommentItem
-                key={reply.id}
-                comment={reply}
-                isReply
-                replyingToName={replyingToName}
-                onReplied={onReplied}
-              />
-            );
-          })}
-        </div>
+        <CommentNode
+          key={comment.id}
+          comment={comment}
+          depth={0}
+          childrenByParent={childrenByParent}
+          onReplied={onReplied}
+        />
       ))}
     </div>
   );
