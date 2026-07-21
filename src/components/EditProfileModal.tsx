@@ -5,6 +5,7 @@ import { X, Save, Loader2, Eye, EyeOff, Copy, Check } from "lucide-react";
 import { useIdentity } from "@/lib/identity-context";
 import { signBrowserEvent } from "@/lib/browser-identity";
 import { getRelayClient } from "@/lib/relay-client";
+import { resetLiveData } from "@/lib/live-data";
 
 interface EditProfileModalProps {
   onClose: () => void;
@@ -64,6 +65,10 @@ export function EditProfileModal({ onClose }: EditProfileModalProps) {
         identity.privateKey
       );
       await client.publish(event);
+      // Give the relay a tick to store it, then force the live cache to
+      // refetch so the new profile shows up without a manual page reload.
+      await new Promise((r) => setTimeout(r, 300));
+      resetLiveData();
       setSaved(true);
       setTimeout(() => onClose(), 800);
     } finally {

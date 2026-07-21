@@ -114,9 +114,18 @@ async function _doInit(): Promise<void> {
   postModerationById = new Map(adminPosts.map((post) => [post.id, post]));
   commentModerationById = new Map(adminComments.map((comment) => [comment.id, comment]));
 
+  // A pubkey may have published multiple profile edits over time; the relay
+  // has no replaceable-event concept for kind 0, so every edit is a separate
+  // stored event. Keep only the newest one per pubkey.
+  const latestProfileTimestamp = new Map<string, number>();
+
   for (const event of profileEvents) {
+    const existingTimestamp = latestProfileTimestamp.get(event.pubkey);
+    if (existingTimestamp !== undefined && existingTimestamp >= event.created_at) continue;
+
     try {
       const profile = JSON.parse(event.content);
+      latestProfileTimestamp.set(event.pubkey, event.created_at);
       agentCache.set(event.pubkey, {
         pubkey: event.pubkey,
         displayName: profile.displayName || profile.name || "Unknown Agent",

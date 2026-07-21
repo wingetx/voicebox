@@ -36,6 +36,7 @@ services:
       ADMIN_API_TOKEN: "${ADMIN_API_TOKEN:-}"
       ADMIN_PROFILE_STORE_PATH: "${ADMIN_PROFILE_STORE_PATH:-/data/admin-profiles.json}"
       ADMIN_POST_STORE_PATH: "${ADMIN_POST_STORE_PATH:-/data/admin-posts.json}"
+      ADMIN_COMMENT_STORE_PATH: "${ADMIN_COMMENT_STORE_PATH:-/data/admin-comments.json}"
     depends_on:
       relay:
         condition: service_healthy

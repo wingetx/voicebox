@@ -136,11 +136,17 @@ function validateEvent(event: VoiceboxEvent): string | null {
 interface Subscription {
   subId: string;
   filters: Filter[];
-  ws: WebSocket;
 }
 
-const subscriptions = new Map<string, Subscription>();
-const connSubs      = new Map<WebSocket, Set<string>>();
+// Subscriptions are scoped per-connection: outer key is the client's
+// WebSocket, inner key is that client's own subId. Client-generated subIds
+// (like "ui_8") are only unique within one browser tab's RelayClient
+// instance, not globally — every tab restarts its own counter from 1. A
+// single flat Map keyed by subId alone let one client's REQ silently
+// overwrite a different client's subscription of the same name (e.g. two
+// agents both reaching "ui_8"), which killed live delivery for whichever
+// connection lost the collision.
+const subscriptionsByWs = new Map<WebSocket, Map<string, Subscription>>();
 
 async function main() {
   await initDb(DB_PATH);
@@ -164,8 +170,7 @@ async function main() {
       return;
     }
 
-    const subIds = new Set<string>();
-    connSubs.set(ws, subIds);
+    subscriptionsByWs.set(ws, new Map());
 
     console.log(`📡 Agent connected from ${ip} (total: ${wss.clients.size})`);
 
@@ -218,10 +223,7 @@ async function main() {
     });
 
     ws.on("close", () => {
-      for (const subId of subIds) {
-        subscriptions.delete(subId);
-      }
-      connSubs.delete(ws);
+      subscriptionsByWs.delete(ws);
       trackDisconnect(ip);
       console.log(`📡 Agent disconnected (total: ${wss.clients.size})`);
     });
@@ -255,10 +257,13 @@ async function main() {
 
     sendTo(ws, ["OK", event.id, true, ""]);
 
-    // Broadcast to matching subscribers
-    for (const [, sub] of subscriptions) {
-      if (sub.ws !== ws && matchesFilters(event, sub.filters)) {
-        sendTo(sub.ws, ["EVENT", sub.subId, event]);
+    // Broadcast to matching subscribers (never echo back to the publisher's own connection)
+    for (const [subWs, subs] of subscriptionsByWs) {
+      if (subWs === ws) continue;
+      for (const sub of subs.values()) {
+        if (matchesFilters(event, sub.filters)) {
+          sendTo(subWs, ["EVENT", sub.subId, event]);
+        }
       }
     }
 
@@ -279,20 +284,14 @@ async function main() {
     }
 
     // Subscription cap per connection
-    const connSubSet = connSubs.get(ws)!;
-    if (connSubSet.size >= MAX_SUBSCRIPTIONS) {
+    const wsSubs = subscriptionsByWs.get(ws)!;
+    if (!wsSubs.has(subId) && wsSubs.size >= MAX_SUBSCRIPTIONS) {
       sendTo(ws, ["NOTICE", `subscription limit reached (max ${MAX_SUBSCRIPTIONS})`]);
       return;
     }
 
-    // Replace existing subscription with same ID if present
-    if (subscriptions.has(subId)) {
-      subscriptions.delete(subId);
-    }
-
-    const sub: Subscription = { subId, filters, ws };
-    subscriptions.set(subId, sub);
-    connSubSet.add(subId);
+    // Replace this connection's own existing subscription with the same ID, if present
+    wsSubs.set(subId, { subId, filters });
 
     const events = queryEvents(filters);
     for (const event of events) {
@@ -306,8 +305,7 @@ async function main() {
   function handleClose(ws: WebSocket, msg: ["CLOSE", string]) {
     const [, subId] = msg;
     if (typeof subId !== "string") return;
-    subscriptions.delete(subId);
-    connSubs.get(ws)?.delete(subId);
+    subscriptionsByWs.get(ws)?.delete(subId);
   }
 
   function matchesFilters(event: VoiceboxEvent, filters: Filter[]): boolean {

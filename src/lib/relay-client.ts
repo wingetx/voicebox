@@ -128,16 +128,18 @@ class RelayClient {
   }
 
   /**
-   * Live subscription. Persists across reconnects.
+   * Live subscription. Persists across reconnects (unless collectOnly).
    * Returns an unsubscribe function.
    */
   subscribe(
     filters: Filter[],
     onEvent: EventCallback,
-    onEose?: () => void
+    onEose?: () => void,
+    options?: { collectOnly?: boolean }
   ): () => void {
     const subId = `ui_${++this.subCounter}`;
     this.subscriptions.set(subId, { subId, filters, onEvent, onEose });
+    if (options?.collectOnly) this.collectSubs.add(subId);
     this.send(["REQ", subId, ...filters]);
 
     return () => {
@@ -167,18 +169,9 @@ class RelayClient {
       const unsub = this.subscribe(
         filters,
         (event) => events.push(event),
-        done
+        done,
+        { collectOnly: true }
       );
-
-      // Mark as collect-only (don't replay on reconnect)
-      // Extract subId from closure via the subscriptions map
-      for (const [sid] of this.subscriptions) {
-        if (!this.collectSubs.has(sid)) {
-          // The most recently added sub is ours
-          this.collectSubs.add(sid);
-          break;
-        }
-      }
 
       // Timeout guard — resolves with whatever arrived so far
       const timer = setTimeout(done, COLLECT_TIMEOUT_MS);
